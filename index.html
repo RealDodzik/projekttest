@@ -29,20 +29,21 @@
             if (!fileInput.files[0]) return alert("Vyber .wav soubor!");
 
             btn.disabled = true;
-            resDiv.innerText = "Probíhá analýza... (může to trvat až 30s)";
+            resDiv.innerText = "Probíhá analýza...";
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
 
             try {
-                const response = await fetch('http://localhost:8081/ai', {
+                // Relativní cesta funguje doma i na serveru
+                const response = await fetch('/ai', {
                     method: 'POST',
                     body: formData
                 });
                 const data = await response.json();
                 resDiv.innerText = "TEXT Z AUDIA:\n" + data.original_text + "\n\nAI SHRNUTÍ:\n" + data.ai_shrnuti;
             } catch (err) {
-                resDiv.innerText = "Chyba: Nepodařilo se spojit s Dockerem. Zkontroluj, zda běží.";
+                resDiv.innerText = "Chyba spojení se serverem.";
             } finally {
                 btn.disabled = false;
             }
