@@ -14,7 +14,7 @@ CORS(app)
 # Konfigurace - doma zkus model "llama3.1" (8b) místo "llama3.2:1b"
 AI_API_KEY = os.getenv("OPENAI_API_KEY", "ollama")
 AI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://host.docker.internal:11434/v1")
-AI_MODEL = "llama3.1" # Pro domácí testování (před odevzdáním přepni na llama3.2:1b, pokud je server slabý)
+AI_MODEL = "gemma3:27b" # Pro domácí testování (před odevzdáním přepni na llama3.2:1b, pokud je server slabý)
 
 UPLOAD_FOLDER = os.path.join(base_dir, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
