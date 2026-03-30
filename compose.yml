@@ -1,9 +1,0 @@
-services:
-  web:
-    build: .
-    ports:
-      - "8081:8081"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - .:/app
