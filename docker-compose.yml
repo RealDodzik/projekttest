@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8081:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+    env_file:
+      - neco.env
+    environment:
+      - AI_API_KEY=${OPENAI_API_KEY}
+      - AI_BASE_URL=${OPENAI_BASE_URL}
