@@ -1,9 +1,0 @@
-services:
-  web:
-    build: .
-    ports:
-      - "8080:8081"
-    environment:
-      # Tímto říkáš: "Vezmi hodnotu, kterou má server nastavenou v Portaineru"
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
