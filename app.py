@@ -9,8 +9,10 @@ import speech_recognition as sr
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+# Kurim filesystem fix – jediná zapisovatelná cesta
+UPLOAD_FOLDER = "/tmp/uploads"
+DB_FILE = "/tmp/history.json"
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
@@ -19,8 +21,6 @@ CORS(app)
 AI_API_KEY = os.getenv("OPENAI_API_KEY", "nenastaveno")
 AI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://kurim.ithope.eu/v1")
 AI_MODEL = os.getenv("AI_MODEL", "gemma3:27b")
-
-DB_FILE = os.path.join(BASE_DIR, "history.json")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -67,8 +67,12 @@ def save_history(fname, ftype):
 
 def process_audio(path):
     rec = sr.Recognizer()
-    with sr.AudioFile(path) as src:
-        audio = rec.record(src)
+    try:
+        with sr.AudioFile(path) as src:
+            audio = rec.record(src)
+    except:
+        return "Soubor nelze přečíst"
+
     try:
         return rec.recognize_sphinx(audio, language="cs-CZ")
     except:
@@ -103,7 +107,7 @@ def analyze():
         )
         ai_output = res.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        ai_output = "AI server nedostupný"
+        ai_output = f"AI server nedostupný: {str(e)}"
 
     return jsonify({
         "media_type": media_type,
