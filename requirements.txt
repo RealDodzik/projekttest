@@ -1,7 +1,7 @@
-Flask==2.2.5
-Flask-Cors==3.1.2
-requests==2.31.0
-pydub==0.25.1
-SpeechRecognition==3.9.0
-httpx==0.24.1
-openai==1.31.0
+flask
+flask-cors
+requests
+pydub
+SpeechRecognition
+httpx
+openai
