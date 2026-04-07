@@ -5,8 +5,6 @@ import requests
 import urllib3
 from flask import Flask, jsonify, request, render_template_string
 from flask_cors import CORS
-import speech_recognition as sr
-from pydub import AudioSegment
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -22,190 +20,7 @@ AI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://kurim.ithope.eu/v1")
 AI_MODEL = os.getenv("AI_MODEL", "gemma3:27b")
 MAX_UPLOAD_SIZE_MB = 20
 
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Filip Kuba - Audio AI Analyzer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #fcf6f0;
-            --card-bg: #ffffff;
-            --text-main: #2d2d2d;
-            --text-sub: #666;
-            --accent-color: #e67e22;
-            --accent-hover: #d35400;
-            --border-color: #eee;
-            --result-bg: #fff7e9;
-            --transition: all 0.3s ease;
-        }
-
-        [data-theme="dark"] {
-            --bg-color: #1a1a2e;
-            --card-bg: #16213e;
-            --text-main: #e9ecef;
-            --text-sub: #a2a8d3;
-            --accent-color: #7209b7;
-            --accent-hover: #560bad;
-            --border-color: #24344d;
-            --result-bg: #0f172a;
-        }
-
-        body {
-            background: var(--bg-color);
-            font-family: 'Quicksand', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: var(--text-main);
-            transition: var(--transition);
-        }
-
-        .theme-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--card-bg);
-            border: 2px solid var(--accent-color);
-            padding: 10px 15px;
-            color: var(--accent-color);
-            border-radius: 30px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .theme-toggle:hover {
-            transform: scale(1.05);
-        }
-
-        .container {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 650px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            transition: var(--transition);
-            text-align: center;
-        }
-
-        h1 {
-            color: var(--accent-color);
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .upload-box {
-            border: 2px dashed var(--accent-color);
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-
-        input[type="file"] {
-            margin-bottom: 15px;
-            width: 100%;
-        }
-
-        button {
-            background: var(--accent-color);
-            color: white;
-            padding: 15px 25px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 1.2em;
-            font-weight: bold;
-            transition: var(--transition);
-        }
-
-        button:hover {
-            background: var(--accent-hover);
-            transform: translateY(-2px);
-        }
-
-        #result {
-            display: none;
-            background: var(--result-bg);
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 25px;
-            text-align: left;
-            border-left: 4px solid var(--accent-color);
-        }
-    </style>
-</head>
-<body data-theme="light">
-
-<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
-
-<div class="container">
-    <h1>Audio AI Analyzer</h1>
-    <p class="author">By Filip Kuba</p>
-
-    <div class="upload-box">
-        <input type="file" id="file" accept=".wav,.mp3">
-        <button onclick="upload()">Analyzovat soubor</button>
-        <div id="loading" style="display:none; margin-top:10px; color: var(--accent-color); font-weight: 600;">AI přemýšlí...</div>
-    </div>
-
-    <div id="result">
-        <p><strong>🎧 Média:</strong> <span id="media"></span></p>
-        <p><strong>📝 Rozpoznaný text:</strong><br><span id="text"></span></p>
-        <p><strong>🤖 AI Analýza:</strong><br><span id="ai"></span></p>
-    </div>
-</div>
-
-<script>
-function toggleTheme() {
-    const body = document.body;
-    const btn = document.getElementById("themeBtn");
-    if (body.dataset.theme === "light") {
-        body.dataset.theme = "dark";
-        btn.textContent = "☀️ Light Mode";
-    } else {
-        body.dataset.theme = "light";
-        btn.textContent = "🌙 Dark Mode";
-    }
-}
-
-async function upload() {
-    const file = document.getElementById("file").files[0];
-    if (!file) return alert("Vyber soubor!");
-
-    const form = new FormData();
-    form.append("file", file);
-
-    document.getElementById("loading").style.display = "block";
-    document.getElementById("result").style.display = "none";
-
-    try {
-        let res = await fetch("/ai", { method: "POST", body: form });
-        let data = await res.json();
-
-        document.getElementById("media").textContent = data.media_type;
-        document.getElementById("text").textContent = data.original_text;
-        document.getElementById("ai").textContent = data.ai_analysis;
-    } catch (e) {
-        alert("Chyba při komunikaci s AI: " + e);
-    }
-
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("result").style.display = "block";
-}
-</script>
-
-</body>
-</html>
-"""
+HTML_TEMPLATE = """ ... tu dej stejné HTML jako máš ... """
 
 @app.route("/")
 def home():
@@ -228,35 +43,36 @@ def save_history(fname, ftype):
     with open(DB_FILE, "w") as f:
         json.dump(hist, f, indent=4)
 
-def convert_to_wav16_mono(path):
+def transcribe_audio(path):
+    """
+    Používá OpenAI Whisper API pro převod audio -> text.
+    """
     try:
-        audio = AudioSegment.from_file(path)
-        audio = audio.set_channels(1).set_frame_rate(16000)
-        new_path = os.path.splitext(path)[0] + "_mono.wav"
-        audio.export(new_path, format="wav")
-        return new_path
-    except Exception as e:
-        print("Chyba při převodu:", e)
-        return None
+        import httpx
+        from openai import OpenAI
 
-def process_audio(path):
-    rec = sr.Recognizer()
-    converted = convert_to_wav16_mono(path)
-    if not converted:
-        return "Audio nelze převést"
-    try:
-        with sr.AudioFile(converted) as src:
-            audio = rec.record(src)
-        return rec.recognize_sphinx(audio, language="cs-CZ")
-    except:
-        return "Nerozpoznáno"
+        client = OpenAI(
+            api_key=AI_API_KEY,
+            base_url=AI_BASE_URL,
+            http_client=httpx.Client(verify=False)
+        )
+
+        with open(path, "rb") as audio_file:
+            resp = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+        return resp.text
+    except Exception as e:
+        print("Chyba při transkripci:", e)
+        return None
 
 @app.route("/ai", methods=["POST"])
 def analyze():
     if AI_API_KEY == "nenastaveno":
         return jsonify({"error": "API klíč není nastaven"}), 500
 
-    f = request.files["file"]
+    f = request.files.get("file")
     if not f:
         return jsonify({"error": "Soubor nebyl nahrán"}), 400
 
@@ -269,25 +85,29 @@ def analyze():
     media_type = "Audio"
     save_history(f.filename, media_type)
 
-    text = process_audio(fp)
-    if text in ["Nerozpoznáno", "Audio nelze převést"]:
-        ai_output = "Audio nebylo rozpoznáno, AI analýza není možná."
-    else:
-        prompt = f"Shrň jednou větou tento text a napiš jestli je to řeč nebo píseň: {text}"
-        try:
-            res = requests.post(
-                f"{AI_BASE_URL}/chat/completions",
-                json={"model": AI_MODEL, "messages":[{"role":"user","content":prompt}], "stream":False},
-                headers={"Authorization": f"Bearer {AI_API_KEY}"},
-                verify=False,
-                timeout=60
-            )
-            if res.headers.get("Content-Type", "").startswith("application/json"):
-                ai_output = res.json()["choices"][0]["message"]["content"]
-            else:
-                ai_output = "AI server nevrátil JSON, analýza není možná."
-        except Exception as e:
-            ai_output = f"Chyba při komunikaci s AI: {e}"
+    text = transcribe_audio(fp)
+    if not text:
+        return jsonify({
+            "media_type": media_type,
+            "original_text": "Nerozpoznáno",
+            "ai_analysis": "Audio nebylo rozpoznáno, AI analýza není možná."
+        })
+
+    prompt = f"Shrň jednou větou tento text a napiš jestli je to řeč nebo píseň: {text}"
+    try:
+        res = requests.post(
+            f"{AI_BASE_URL}/chat/completions",
+            json={"model": AI_MODEL, "messages":[{"role":"user","content":prompt}], "stream":False},
+            headers={"Authorization": f"Bearer {AI_API_KEY}"},
+            verify=False,
+            timeout=60
+        )
+        if res.headers.get("Content-Type", "").startswith("application/json"):
+            ai_output = res.json()["choices"][0]["message"]["content"]
+        else:
+            ai_output = "AI server nevrátil JSON, analýza není možná."
+    except Exception as e:
+        ai_output = f"Chyba při komunikaci s AI: {e}"
 
     return jsonify({"media_type": media_type, "original_text": text, "ai_analysis": ai_output})
 
