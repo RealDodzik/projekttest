@@ -7,5 +7,3 @@ services:
       # Tímto říkáš: "Vezmi hodnotu, kterou má server nastavenou v Portaineru"
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
