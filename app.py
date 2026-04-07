@@ -9,8 +9,9 @@ import speech_recognition as sr
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+# Zapisovatelná cesta pro server (např. Docker)
+UPLOAD_FOLDER = "/tmp/uploads"
+DB_FILE = "/tmp/history.json"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
@@ -19,8 +20,6 @@ CORS(app)
 AI_API_KEY = os.getenv("OPENAI_API_KEY", "nenastaveno")
 AI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://kurim.ithope.eu/v1")
 AI_MODEL = os.getenv("AI_MODEL", "gemma3:27b")
-
-DB_FILE = os.path.join(BASE_DIR, "history.json")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -168,7 +167,6 @@ HTML_TEMPLATE = """
 function toggleTheme() {
     const body = document.body;
     const btn = document.getElementById("themeBtn");
-
     if (body.dataset.theme === "light") {
         body.dataset.theme = "dark";
         btn.textContent = "☀️ Light Mode";
@@ -188,16 +186,16 @@ async function upload() {
     document.getElementById("loading").style.display = "block";
     document.getElementById("result").style.display = "none";
 
-    let res = await fetch("/ai", {
-        method: "POST",
-        body: form
-    });
+    try {
+        let res = await fetch("/ai", { method: "POST", body: form });
+        let data = await res.json();
 
-    let data = await res.json();
-
-    document.getElementById("media").textContent = data.media_type;
-    document.getElementById("text").textContent = data.original_text;
-    document.getElementById("ai").textContent = data.ai_analysis;
+        document.getElementById("media").textContent = data.media_type;
+        document.getElementById("text").textContent = data.original_text;
+        document.getElementById("ai").textContent = data.ai_analysis;
+    } catch (e) {
+        alert("Chyba při komunikaci s AI: " + e);
+    }
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("result").style.display = "block";
@@ -214,15 +212,10 @@ def home():
 
 @app.route("/status")
 def status():
-    return jsonify({"status": "online"})
+    return jsonify({"status": "online", "app": "Filip Kuba AI"})
 
 def save_history(fname, ftype):
-    entry = {
-        "timestamp": str(datetime.datetime.now()),
-        "filename": fname,
-        "type": ftype
-    }
-
+    entry = {"timestamp": str(datetime.datetime.now()), "filename": fname, "type": ftype}
     hist = []
     if os.path.exists(DB_FILE):
         try:
@@ -230,18 +223,20 @@ def save_history(fname, ftype):
                 hist = json.load(f)
         except:
             pass
-
     hist.append(entry)
     with open(DB_FILE, "w") as f:
         json.dump(hist, f, indent=4)
 
 def process_audio(path):
     rec = sr.Recognizer()
-    with sr.AudioFile(path) as src:
-        audio = rec.record(src)
+    try:
+        with sr.AudioFile(path) as src:
+            audio = rec.record(src)
+    except:
+        return "Soubor nelze přečíst"
 
     try:
-        return rec.recognize_sphinx(audio, language="cs-CCZ")
+        return rec.recognize_sphinx(audio, language="cs-CZ")
     except:
         return "Nerozpoznáno"
 
@@ -260,34 +255,19 @@ def analyze():
     text = process_audio(fp)
 
     prompt = f"Shrň jednou větou tento text a napiš jestli je to řeč nebo píseň: {text}"
-
     try:
         res = requests.post(
             f"{AI_BASE_URL}/chat/completions",
-            json={
-                "model": AI_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "stream": False
-            },
+            json={"model": AI_MODEL, "messages":[{"role":"user","content":prompt}], "stream":False},
             headers={"Authorization": f"Bearer {AI_API_KEY}"},
             verify=False,
             timeout=60
         )
-
-        try:
-            data = res.json()
-            ai_output = data["choices"][0]["message"]["content"]
-        except:
-            ai_output = "AI vrátilo neplatnou odpověď: " + res.text[:200]
-
+        ai_output = res.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        ai_output = "AI server nedostupný"
+        ai_output = f"AI server nedostupný: {str(e)}"
 
-    return jsonify({
-        "media_type": media_type,
-        "original_text": text,
-        "ai_analysis": ai_output
-    })
+    return jsonify({"media_type": media_type, "original_text": text, "ai_analysis": ai_output})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
