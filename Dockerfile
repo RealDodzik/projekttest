@@ -2,13 +2,14 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Nainstalujeme ffmpeg a potřebné balíčky
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# Kopíruj dependencies
+COPY requirements.txt .
 
-COPY requirements.txt . 
+# Nainstaluj všechny Python knihovny
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Kopíruj celý projekt
 COPY . .
 
-EXPOSE 8080
-CMD ["python3", "app.py"]
+# Nastav port z proměnné PORT
+CMD ["python", "app.py"]
