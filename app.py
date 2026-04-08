@@ -1,37 +1,95 @@
 import os
 import json
-import datetime
 import requests
 import urllib3
 from flask import Flask, jsonify, request, render_template_string
 from flask_cors import CORS
 
+# Vypnutí varování pro SSL (školní server používá interní certifikáty)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-UPLOAD_FOLDER = "/tmp/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
 CORS(app)
 
-# LIMIT 1MB - pokud uživatel nahraje víc, Flask mu rovnou vrátí chybu 413
+# Limit 1MB kvůli omezení školního proxy serveru
 app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024 
 
+UPLOAD_FOLDER = "/tmp/uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Načtení nastavení z prostředí
 AI_API_KEY = os.getenv("OPENAI_API_KEY", "nenastaveno")
 AI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://kurim.ithope.eu/v1")
 AI_MODEL = os.getenv("AI_MODEL", "gemma3:27b")
 
-# ... (HTML_TEMPLATE zůstává stejná jako v minulé zprávě) ...
-# POUŽIJ STEJNOU ŠABLONU JAKO PŘEDTÍM, JEN ZMĚNÍME PYTHON LOGIKU NÍŽE
+# --- JEDNODUCHÁ ŠABLONA ---
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Audio Analyzer - Filip Kuba</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a2e; color: white; display: flex; justify-content: center; padding-top: 50px; }
+        .card { background: #16213e; padding: 30px; border-radius: 15px; width: 400px; text-align: center; border: 1px solid #7209b7; }
+        input { margin-bottom: 20px; }
+        button { background: #7209b7; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; }
+        #res { margin-top: 20px; text-align: left; background: #0f172a; padding: 10px; border-radius: 5px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Audio AI Analyzer</h1>
+        <p>Limit souboru: 1 MB</p>
+        <input type="file" id="file" accept=".wav,.mp3">
+        <button onclick="upload()">Analyzovat</button>
+        <div id="loading" style="display:none;">⚡ AI pracuje...</div>
+        <div id="res"></div>
+    </div>
 
-@app.errorhandler(413)
-def request_entity_too_large(error):
-    return jsonify({"error": "Soubor je příliš velký! Školní server povoluje max 1 MB."}), 413
+    <script>
+    async function upload() {
+        const file = document.getElementById("file").files[0];
+        if (!file) return alert("Vyber soubor!");
+        
+        document.getElementById("loading").style.display = "block";
+        const form = new FormData();
+        form.append("file", file);
 
-def transcribe_audio(path):
+        try {
+            const res = await fetch("/ai", { method: "POST", body: form });
+            const data = await res.json();
+            document.getElementById("res").style.display = "block";
+            document.getElementById("res").innerHTML = data.error 
+                ? `<span style="color:red">Chyba: ${data.error}</span>` 
+                : `<strong>Text:</strong> ${data.original_text}<br><br><strong>AI:</strong> ${data.ai_analysis}`;
+        } catch (e) {
+            alert("Chyba: " + e.message);
+        }
+        document.getElementById("loading").style.display = "none";
+    }
+    </script>
+</body>
+</html>
+"""
+
+@app.route("/")
+def home():
+    return render_template_string(HTML_TEMPLATE)
+
+@app.route("/ai", methods=["POST"])
+def analyze():
     try:
+        if "file" not in request.files:
+            return jsonify({"error": "Soubor nenalezen"}), 400
+        
+        f = request.files["file"]
+        path = os.path.join(UPLOAD_FOLDER, f.filename)
+        f.save(path)
+
+        # 1. PŘEVOD AUDIO -> TEXT (Whisper)
         with open(path, "rb") as audio_file:
-            resp = requests.post(
+            stt_res = requests.post(
                 f"{AI_BASE_URL}/audio/transcriptions",
                 headers={"Authorization": f"Bearer {AI_API_KEY}"},
                 files={"file": audio_file},
@@ -39,55 +97,27 @@ def transcribe_audio(path):
                 timeout=30
             )
         
-        if resp.status_code == 404:
-            return "CHYBA: Školní server nepodporuje Whisper (převod zvuku na text). Zkus nahrát jen text (pokud to aplikace dovolí) nebo kontaktuj správce."
-        
-        if resp.status_code != 200:
-            return f"Chyba API ({resp.status_code}): {resp.text}"
-            
-        return resp.json().get("text", "Nerozpoznáno")
-    except Exception as e:
-        return f"Chyba spojení: {str(e)}"
+        if stt_res.status_code != 200:
+            return jsonify({"error": f"API školy nepodporuje audio (404) nebo je přetížené. Zkus menší soubor. Detail: {stt_res.text}"}), stt_res.status_code
 
-@app.route("/ai", methods=["POST"])
-def analyze():
-    try:
-        if "file" not in request.files:
-            return jsonify({"error": "Nebyl vybrán soubor"}), 400
-            
-        f = request.files["file"]
-        fp = os.path.join(UPLOAD_FOLDER, f.filename)
-        f.save(fp)
+        text = stt_res.json().get("text", "")
 
-        # Volání STT
-        text = transcribe_audio(fp)
-
-        # Pokud STT nefunguje, nebudeme volat AI analýzu a rovnou vrátíme chybu
-        if "CHYBA:" in text or "Chyba API" in text:
-            return jsonify({
-                "media_type": "Audio (Chyba)",
-                "original_text": text,
-                "ai_analysis": "Analýza neproběhla, protože nebylo možné získat text ze zvuku."
-            })
-
-        # Volání AI analýzy (chat)
-        prompt = f"Shrň tento text: {text}"
-        resp_ai = requests.post(
+        # 2. AI ANALÝZA (Gemma)
+        chat_res = requests.post(
             f"{AI_BASE_URL}/chat/completions",
-            json={"model": AI_MODEL, "messages": [{"role": "user", "content": prompt}]},
+            json={"model": AI_MODEL, "messages": [{"role": "user", "content": f"Shrň tento text: {text}"}]},
             headers={"Authorization": f"Bearer {AI_API_KEY}"},
             verify=False
         )
         
-        ai_out = resp_ai.json()["choices"][0]["message"]["content"]
+        ai_text = chat_res.json()["choices"][0]["message"]["content"]
 
-        return jsonify({
-            "media_type": "Audio",
-            "original_text": text,
-            "ai_analysis": ai_out
-        })
+        return jsonify({"original_text": text, "ai_analysis": ai_text})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    # Důležité: Port se musí brát z prostředí
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
