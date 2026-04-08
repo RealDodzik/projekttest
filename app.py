@@ -76,8 +76,10 @@ HTML_TEMPLATE = """
             
             resDiv.style.display = "block";
             if (data.error) {
+                // Přidáno zpětné lomítko před dolar, aby to Flask nepletlo
                 resDiv.innerHTML = `<div class="error"><strong>Chyba:</strong><br>\${data.error}</div>`;
             } else {
+                // Tady se nyní správně vypíše text z nahrávky a analýza od Gemmy
                 resDiv.innerHTML = `<strong>📝 Přepis:</strong><br>\${data.original_text}<br><br><strong>🤖 AI Analýza:</strong><br>\${data.ai_analysis}`;
             }
         } catch (e) {
