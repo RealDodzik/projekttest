@@ -20,79 +20,240 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Načtení nastavení z dashboardu
 AI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 AI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://kurim.ithope.eu/v1")
-AI_MODEL = "gemma3:27b" # Model, na který máš oprávnění
+AI_MODEL = "gemma3:27b" 
 
-# TADY byla ta chybějící proměnná!
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Audio AI Analyzer - Filip Kuba</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filip Kuba - Media AI Extractor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: #16213e; padding: 40px; border-radius: 20px; width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #7209b7; }
-        h1 { color: #a2a8d3; margin-bottom: 5px; }
-        .author { color: #7209b7; font-weight: bold; margin-bottom: 30px; }
-        .upload-area { border: 2px dashed #7209b7; padding: 20px; border-radius: 15px; margin-bottom: 20px; background: rgba(114, 9, 183, 0.05); }
-        button { background: #7209b7; color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #560bad; transform: translateY(-2px); }
-        #loading { margin-top: 15px; color: #4cc9f0; display: none; }
-        #res { margin-top: 25px; text-align: left; background: #0f172a; padding: 20px; border-radius: 12px; display: none; border-left: 4px solid #7209b7; line-height: 1.6; }
-        .error { color: #ff4d4d; font-size: 14px; }
+        :root {
+            --bg-color: #fcf6f0;
+            --card-bg: #ffffff;
+            --text-main: #2d2d2d;
+            --text-sub: #666666;
+            --accent-color: #e67e22;
+            --accent-hover: #d35400;
+            --border-color: #eee;
+            --result-bg: #fffbf2;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --text-main: #e9ecef;
+            --text-sub: #a2a8d3;
+            --accent-color: #7209b7;
+            --accent-hover: #560bad;
+            --border-color: #24344d;
+            --result-bg: #0f172a;
+        }
+
+        body { 
+            font-family: 'Quicksand', sans-serif; 
+            margin: 0; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color); 
+            color: var(--text-main);
+            transition: var(--transition);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 10px 15px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: var(--transition);
+            z-index: 1000;
+        }
+        .theme-toggle:hover { transform: scale(1.05); }
+
+        .container { 
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 24px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            width: 90%;
+            max-width: 650px; 
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        h1 { 
+            color: var(--accent-color); 
+            margin-bottom: 10px;
+            font-weight: 700;
+            font-size: 2.2em;
+        }
+
+        .author { color: var(--text-sub); margin-bottom: 30px; font-weight: 600; }
+
+        .upload-section { 
+            border: 2px dashed var(--accent-color); 
+            padding: 30px; 
+            border-radius: 20px; 
+            margin-bottom: 25px; 
+            background: rgba(var(--accent-color), 0.05);
+        }
+
+        input[type="file"] { 
+            margin-bottom: 20px; 
+            color: var(--text-main);
+            width: 100%;
+        }
+
+        button#btn { 
+            background: var(--accent-color); 
+            color: white; 
+            border: none; 
+            padding: 18px 30px; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-weight: 700; 
+            font-size: 1.2em;
+            width: 100%; 
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        button#btn:hover { 
+            background: var(--accent-hover); 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        button#btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        #result { 
+            display: none; 
+            margin-top: 30px; 
+            padding: 25px; 
+            background: var(--result-bg); 
+            border-radius: 18px; 
+            border: 1px solid var(--border-color);
+            text-align: left;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .label { 
+            font-weight: 700; 
+            color: var(--accent-color); 
+            text-transform: uppercase; 
+            font-size: 0.85em; 
+            letter-spacing: 1px;
+            margin-bottom: 8px; 
+            display: block; 
+        }
+
+        .content-box { margin-bottom: 20px; line-height: 1.6; }
+        
+        .loader { 
+            display: none; 
+            margin: 20px auto; 
+            width: 30px; height: 30px; 
+            border: 4px solid var(--border-color); 
+            border-top: 4px solid var(--accent-color); 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
-    <div class="card">
-        <h1>Audio AI Analyzer</h1>
-        <div class="author">By Filip Kuba</div>
-        <div class="upload-area">
-            <input type="file" id="file" accept=".wav">
-            <p style="font-size: 12px; color: #666;">Max. 1 MB, formát .wav</p>
+<body data-theme="light">
+
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
+
+    <div class="container">
+        <h1>Media AI Extractor</h1>
+        <p class="author">By Filip Kuba</p>
+        
+        <div class="upload-section">
+            <input type="file" id="mediaFile" accept=".wav">
+            <button id="btn" onclick="upload()">Analyzovat soubor</button>
+            <div id="loader" class="loader"></div>
+            <p id="loadingText" style="display:none; color: var(--accent-color); font-weight: 600;">AI přemýšlí...</p>
         </div>
-        <button onclick="upload()">Analyzovat soubor</button>
-        <div id="loading">⚡ AI přemýšlí, vydrž...</div>
-        <div id="res">
-            <p><strong>📝 Přepis:</strong> <span id="transcription-text"></span></p>
-            <p><strong>🤖 AI Analýza:</strong> <span id="analysis-text"></span></p>
+
+        <div id="result">
+            <span class="label">Přípona</span>
+            <div id="m_type" class="content-box" style="font-weight: 600;"></div>
+
+            <span class="label">Přepis textu</span>
+            <div id="o_text" class="content-box"></div>
+
+            <span class="label">AI Insight</span>
+            <div id="ai_res" class="content-box" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent-color);"></div>
         </div>
     </div>
 
     <script>
-    async function upload() {
-        const fileInput = document.getElementById("file");
-        const file = fileInput.files[0];
-        if (!file) return alert("Musíš vybrat soubor!");
-        
-        const loading = document.getElementById("loading");
-        const resDiv = document.getElementById("res");
-        
-        loading.style.display = "block";
-        resDiv.style.display = "none";
-
-        const form = new FormData();
-        form.append("file", file);
-
-        try {
-            const response = await fetch("/ai", { method: "POST", body: form });
-            const data = await response.json();
-
-            if (data.error) {
-                alert("Chyba: " + data.error);
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById('themeBtn');
+            if (body.getAttribute('data-theme') === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                btn.innerText = "☀️ Light Mode";
             } else {
-                document.getElementById("res").style.display = "block";
-    
-                // Tady JavaScript vezme data z Pythonu a vloží je do SPANů
-                // 'data.original_text' v JS musí odpovídat klíči v Pythonu
-                document.getElementById("transcription-text").innerText = data.original_text;
-                document.getElementById("analysis-text").innerText = data.ai_analysis;
+                body.setAttribute('data-theme', 'light');
+                btn.innerText = "🌙 Dark Mode";
             }
-        } catch (e) {
-            alert("Kritická chyba: " + e.message);
-        } finally {
-            loading.style.display = "none";
         }
-    }
+
+        async function upload() {
+            const fileInput = document.getElementById('mediaFile');
+            const resDiv = document.getElementById('result');
+            const loader = document.getElementById('loader');
+            const loadText = document.getElementById('loadingText');
+            const btn = document.getElementById('btn');
+            
+            if (!fileInput.files[0]) return alert("Nejdřív vyber soubor!");
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+            loadText.style.display = 'block';
+            resDiv.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/ai', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert("Chyba: " + data.error);
+                } else {
+                    document.getElementById('m_type').innerText = "📁 " + data.media_type;
+                    document.getElementById('o_text').innerText = data.original_text || "Text nebyl nalezen.";
+                    document.getElementById('ai_res').innerText = data.ai_analysis;
+                    resDiv.style.display = 'block';
+                }
+            } catch (err) {
+                alert("Chyba spojení.");
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+                loadText.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
@@ -108,15 +269,17 @@ def analyze():
         return jsonify({"error": "Nebyl nahrán žádný soubor"}), 400
     
     f = request.files["file"]
+    # Zjistíme příponu pro výpis v UI
+    ext = f.filename.split('.')[-1].upper() if '.' in f.filename else "Unknown"
+    
     path = os.path.join(UPLOAD_FOLDER, f.filename)
     f.save(path)
 
     try:
-        # 1. AUDIO -> TEXT (Lokálně přes SpeechRecognition, protože Whisper je blokován)
+        # 1. AUDIO -> TEXT (Lokálně přes SpeechRecognition)
         recognizer = sr.Recognizer()
         with sr.AudioFile(path) as source:
             audio_data = recognizer.record(source)
-            # Vyžaduje odchozí internet na Google API
             text = recognizer.recognize_google(audio_data, language="cs-CZ")
 
         # 2. CHAT ANALÝZA (Školní Gemma)
@@ -137,12 +300,13 @@ def analyze():
         ai_text = chat_res.json()["choices"][0]["message"]["content"]
 
         return jsonify({
+            "media_type": ext,
             "original_text": text,
             "ai_analysis": ai_text
         })
 
     except sr.UnknownValueError:
-        return jsonify({"error": "AI nerozumněla nahrávce. Zkus mluvit zřetelněji a použij soubor .wav."}), 400
+        return jsonify({"error": "AI nerozuměla nahrávce. Zkus mluvit zřetelněji a použij soubor .wav."}), 400
     except Exception as e:
         return jsonify({"error": f"Interní chyba: {str(e)}"}), 500
     finally:
@@ -150,6 +314,5 @@ def analyze():
             os.remove(path)
 
 if __name__ == "__main__":
-    # Musí poslouchat na portu z proměnné prostředí
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
