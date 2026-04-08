@@ -52,7 +52,10 @@ HTML_TEMPLATE = """
         </div>
         <button onclick="upload()">Analyzovat soubor</button>
         <div id="loading">⚡ AI přemýšlí, vydrž...</div>
-        <div id="res"></div>
+        <div id="res">
+            <p><strong>📝 Přepis:</strong> <span id="transcription-text"></span></p>
+            <p><strong>🤖 AI Analýza:</strong> <span id="analysis-text"></span></p>
+        </div>
     </div>
 
     <script>
@@ -73,14 +76,16 @@ HTML_TEMPLATE = """
         try {
             const response = await fetch("/ai", { method: "POST", body: form });
             const data = await response.json();
-            
-            resDiv.style.display = "block";
+
             if (data.error) {
-                // Přidáno zpětné lomítko před dolar, aby to Flask nepletlo
-                resDiv.innerHTML = `<div class="error"><strong>Chyba:</strong><br>\${data.error}</div>`;
+                alert("Chyba: " + data.error);
             } else {
-                // Tady se nyní správně vypíše text z nahrávky a analýza od Gemmy
-                resDiv.innerHTML = `<strong>📝 Přepis:</strong><br>\${data.original_text}<br><br><strong>🤖 AI Analýza:</strong><br>\${data.ai_analysis}`;
+                document.getElementById("res").style.display = "block";
+    
+                // Tady JavaScript vezme data z Pythonu a vloží je do SPANů
+                // 'data.original_text' v JS musí odpovídat klíči v Pythonu
+                document.getElementById("transcription-text").innerText = data.original_text;
+                document.getElementById("analysis-text").innerText = data.ai_analysis;
             }
         } catch (e) {
             alert("Kritická chyba: " + e.message);
