@@ -22,7 +22,7 @@ AI_MODEL = os.getenv("AI_MODEL", "gemma3:27b")
 MAX_UPLOAD_SIZE_MB = 20
 
 # ---------------------------------------------------
-# HTML TEMPLATE (BEZ ZMĚN)
+# HTML TEMPLATE (UPRAVENÝ JAVASCRIPT PRO LEPŠÍ CHYBY)
 # ---------------------------------------------------
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -191,13 +191,30 @@ async function upload() {
 
     try {
         let res = await fetch("/ai", { method: "POST", body: form });
+        
+        // Zabráníme pádu aplikace do ošklivé "SyntaxError" chybové hlášky
+        if (!res.ok) {
+            let errText = await res.text();
+            try {
+                let errJson = JSON.parse(errText);
+                throw new Error(errJson.error); // Podařilo se přečíst JSON s chybou
+            } catch (parseError) {
+                // Nepodařilo se přečíst JSON, pravděpodobně omezení proxy serveru školy
+                throw new Error(`Server vrátil neočekávanou chybu (Status ${res.status}). Možná nepodporuje zpracování zvuku, nebo je soubor příliš velký.`);
+            }
+        }
+
         let data = await res.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
 
         document.getElementById("media").textContent = data.media_type;
         document.getElementById("text").textContent = data.original_text;
         document.getElementById("ai").textContent = data.ai_analysis;
     } catch (e) {
-        alert("Chyba při komunikaci s AI: " + e);
+        alert("Chyba při komunikaci: " + e.message);
     }
 
     document.getElementById("loading").style.display = "none";
@@ -231,7 +248,7 @@ def save_history(fname, ftype):
         json.dump(hist, f, indent=4)
 
 # ---------------------------------------------------
-# NOVÝ FUNKČNÍ AUDIO → TEXT (Whisper API)
+# OPRAVENÝ AUDIO → TEXT (Lepší hlášení chyb z API)
 # ---------------------------------------------------
 def transcribe_audio(path):
     try:
@@ -243,12 +260,13 @@ def transcribe_audio(path):
                 files={"file": audio_file},
                 verify=False
             )
+        # Zobrazíme přesnou chybu ze serveru školy místo tichého "Nerozpoznáno"
         if resp.status_code != 200:
-            return "Nerozpoznáno"
+            return f"Chyba API školy ({resp.status_code}): {resp.text}"
         return resp.json().get("text", "Nerozpoznáno")
     except Exception as e:
         print("Chyba STT:", e)
-        return "Nerozpoznáno"
+        return f"Interní chyba překladu: {str(e)}"
 
 # ---------------------------------------------------
 # AI ANALÝZA TEXTU
@@ -267,36 +285,43 @@ def ai_analysis(text):
         return f"Chyba při komunikaci s AI: {e}"
 
 # ---------------------------------------------------
-# HLAVNÍ API ENDPOINT
+# HLAVNÍ API ENDPOINT (Obrněný proti pádům)
 # ---------------------------------------------------
 @app.route("/ai", methods=["POST"])
 def analyze():
-    if AI_API_KEY == "nenastaveno":
-        return jsonify({"error": "API klíč není nastaven"}), 500
+    try:
+        if AI_API_KEY == "nenastaveno":
+            return jsonify({"error": "API klíč není nastaven"}), 500
 
-    f = request.files["file"]
-    if not f:
-        return jsonify({"error": "Soubor nebyl nahrán"}), 400
+        if "file" not in request.files:
+            return jsonify({"error": "Soubor nebyl nahrán"}), 400
+            
+        f = request.files["file"]
+        if f.filename == '':
+            return jsonify({"error": "Soubor nemá jméno"}), 400
 
-    fp = os.path.join(UPLOAD_FOLDER, f.filename)
-    f.save(fp)
+        fp = os.path.join(UPLOAD_FOLDER, f.filename)
+        f.save(fp)
 
-    save_history(f.filename, "Audio")
+        save_history(f.filename, "Audio")
 
-    # ---- AUDIO → TEXT ----
-    text = transcribe_audio(fp)
+        # ---- AUDIO → TEXT ----
+        text = transcribe_audio(fp)
 
-    # ---- AI ANALÝZA ----
-    if text == "Nerozpoznáno":
-        ai_out = "Audio nebylo rozpoznáno, AI analýza není možná."
-    else:
-        ai_out = ai_analysis(text)
+        # ---- AI ANALÝZA ----
+        if text.startswith("Chyba API") or text.startswith("Interní chyba"):
+            ai_out = "Analýza textu přeskočena kvůli chybě při rozpoznávání zvuku (Whisper na serveru školy zřejmě není dostupný)."
+        else:
+            ai_out = ai_analysis(text)
 
-    return jsonify({
-        "media_type": "Audio",
-        "original_text": text,
-        "ai_analysis": ai_out
-    })
+        return jsonify({
+            "media_type": "Audio",
+            "original_text": text,
+            "ai_analysis": ai_out
+        })
+    except Exception as e:
+        # Zaručí, že server při fatální chybě vždy odpoví platným JSONem
+        return jsonify({"error": f"Kritická chyba serveru: {str(e)}"}), 500
 
 # ---------------------------------------------------
 if __name__ == "__main__":
