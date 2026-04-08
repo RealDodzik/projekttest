@@ -28,7 +28,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Filip Kuba - Media AI Extractor</title>
+    <title>Filip Kuba - Text Extractor (+AI Insight)</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -182,7 +182,8 @@ HTML_TEMPLATE = """
     <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
 
     <div class="container">
-        <h1>Media AI Extractor</h1>
+        <h1>Text Extractor (+AI Insight)</h1>
+        <h2>Mini Version (.wav / 1MB limit)</h2>
         <p class="author">By Filip Kuba</p>
         
         <div class="upload-section">
