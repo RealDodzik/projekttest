@@ -1,7 +1,4 @@
-flask
-flask-cors
+Flask
+Flask-Cors
 requests
-pydub
-SpeechRecognition
-httpx
-openai
+urllib3
