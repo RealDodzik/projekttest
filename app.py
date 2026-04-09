@@ -342,7 +342,7 @@ def analyze():
         recognizer = sr.Recognizer()
         with sr.AudioFile(path) as source:
             audio_data = recognizer.record(source)
-            text_result = recognizer.recognize_google(audio_data, language="cs-CZ")
+            text_result = recognizer.recognize_google(audio_data, language="en-US")
 
         # 2. CHAT ANALÝZA
         chat_res = requests.post(
