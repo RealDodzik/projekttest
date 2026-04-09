@@ -177,9 +177,9 @@ HTML_TEMPLATE = """
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body data-theme="light">
+<body data-theme="dark">
 
-    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">☀️ Light Mode</button>
 
     <div class="container">
         <h1>Text Extractor (+AI Insight)</h1>
@@ -288,7 +288,7 @@ def analyze():
             f"{AI_BASE_URL}/chat/completions",
             json={
                 "model": AI_MODEL, 
-                "messages": [{"role": "user", "content": f"Udělej krátký souhrn tohoto textu: {text}"}]
+                "messages": [{"role": "user", "content": f"Jednoduše shrň obsah textu. Pokud např. rozpoznáš, že se jedná o text písně, vypiš že se jedná o píseň a pokus se najít název a autora. Pokud nic podobného nerozpoznáš, pouze krátce shrň text: {text}"}]
             },
             headers={"Authorization": f"Bearer {AI_API_KEY}"},
             verify=False,
