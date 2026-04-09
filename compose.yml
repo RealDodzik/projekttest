@@ -9,6 +9,7 @@ services:
       # AI klíče se doplní samy z platformy ITHOPE, ale pro jistotu je tu definujeme
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - SECRET_KEY=nejake_tvoje_tajne_heslo_pro_session
     depends_on:
       - db
 
@@ -18,3 +19,10 @@ services:
       - POSTGRES_USER=student
       - POSTGRES_PASSWORD=heslo123
       - POSTGRES_DB=myapp
+    # --- TADY JE TA ZMĚNA ---
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+# Definice svazku, který přežije redeploy
+volumes:
+  db_data:
