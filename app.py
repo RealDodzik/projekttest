@@ -203,18 +203,17 @@ HTML_TEMPLATE = """
             <div class="upload-section">
                 <input type="file" id="mediaFile" accept=".wav">
                 <button onclick="upload()" id="btn">Analyzovat soubor</button>
-                <div id="loader" class="loader"></div>
             </div>
             
             <div id="result" style="display:none; text-align: left; margin-top: 20px;">
-                <span class="label">Výsledek AI</span>
-                <div id="ai_res" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px;"></div>
+                <span class="label">AI Insight (English)</span>
+                <div id="ai_res" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; white-space: pre-wrap;"></div>
             </div>
 
             <h2>Historie</h2>
             {% for item in history %}
                 <div class="history-item">
-                    <span class="label">{{ item[1] }}</span>
+                    <span class="label">{{ item[1] }} ({{ item[4] }})</span>
                     <div>{{ item[3] }}</div>
                 </div>
             {% endfor %}
@@ -258,7 +257,48 @@ HTML_TEMPLATE = """
         }
 
         async function upload() {
-            // ... (původní upload funkce zůstává stejná)
+            const fileInput = document.getElementById('mediaFile');
+            const btn = document.getElementById('btn');
+            const resDiv = document.getElementById('result');
+            const aiRes = document.getElementById('ai_res');
+
+            if (!fileInput.files[0]) {
+                alert("⚠️ Vyberte soubor .wav");
+                return;
+            }
+
+            if (fileInput.files[0].size > 1024 * 1024) {
+                alert("❌ Soubor je moc velký! Limit je 1MB. Tvůj má " + (fileInput.files[0].size / (1024*1024)).toFixed(2) + " MB.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            btn.disabled = true;
+            btn.innerText = "⏳ Pracuji...";
+            resDiv.style.display = "none";
+
+            try {
+                const response = await fetch("/ai", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    aiRes.innerText = data.ai_analysis;
+                    resDiv.style.display = "block";
+                } else {
+                    alert("Chyba: " + (data.error || "Neznámá chyba"));
+                }
+            } catch (err) {
+                alert("Chyba spojení se serverem.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Analyzovat soubor";
+            }
         }
     </script>
 </body>
@@ -272,7 +312,6 @@ def home():
     error = request.args.get("error")
     history_data = []
     
-    # Pokud je uživatel přihlášen, načteme jeho historii
     if 'user_id' in session:
         with engine.connect() as conn:
             result = conn.execute(
@@ -289,17 +328,15 @@ def register():
     password = request.form.get("password")
     
     with engine.connect() as conn:
-        # Zkontrolovat, zda uživatel už neexistuje
         existing = conn.execute(text("SELECT id FROM users WHERE username = :u"), {"u": username}).fetchone()
         if existing:
             return redirect(url_for('home', error="Uživatelské jméno už existuje."))
         
-        # Uložit nového s hashem hesla
         hashed_pw = generate_password_hash(password)
         conn.execute(text("INSERT INTO users (username, password_hash) VALUES (:u, :p)"), {"u": username, "p": hashed_pw})
         conn.commit()
         
-    return redirect(url_for('home', error="Registrace úspěšná! Nyní se přihlas."))
+    return redirect(url_for('home', error="Registrace úspěšná! Můžeš se přihlásit."))
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -310,7 +347,6 @@ def login():
         user = conn.execute(text("SELECT id, username, password_hash FROM users WHERE username = :u"), {"u": username}).fetchone()
         
         if user and check_password_hash(user[2], password):
-            # Přihlášení úspěšné
             session['user_id'] = user[0]
             session['username'] = user[1]
             return redirect(url_for('home'))
@@ -325,7 +361,6 @@ def logout():
 
 @app.route("/ai", methods=["POST"])
 def analyze():
-    # Zabezpečení - jen pro přihlášené
     if 'user_id' not in session:
         return jsonify({"error": "Musíš být přihlášený!"}), 401
 
@@ -338,18 +373,21 @@ def analyze():
     f.save(path)
 
     try:
-        # 1. AUDIO -> TEXT
+        # 1. AUDIO -> TEXT (PŘEPNUTO NA ANGLIČTINU)
         recognizer = sr.Recognizer()
         with sr.AudioFile(path) as source:
             audio_data = recognizer.record(source)
             text_result = recognizer.recognize_google(audio_data, language="en-US")
 
-        # 2. CHAT ANALÝZA
+        # 2. CHAT ANALÝZA (ANGLICKÝ PROMPT)
         chat_res = requests.post(
             f"{AI_BASE_URL}/chat/completions",
             json={
                 "model": AI_MODEL, 
-                "messages": [{"role": "user", "content": f"Jednoduše shrň obsah textu. Pokud např. rozpoznáš, že se jedná o text písně, vypiš že se jedná o píseň a pokus se najít název a autora. Pokud nic podobného nerozpoznáš, pouze krátce shrň text: {text_result}"}]
+                "messages": [{
+                    "role": "user", 
+                    "content": f"Summarize this text in English. If it's a song, identify title and artist. Otherwise, provide a brief summary: {text_result}"
+                }]
             },
             headers={"Authorization": f"Bearer {AI_API_KEY}"},
             verify=False,
@@ -357,11 +395,11 @@ def analyze():
         )
         
         if chat_res.status_code != 200:
-            return jsonify({"error": f"Chyba školní AI (Gemma): {chat_res.text}"}), chat_res.status_code
+            return jsonify({"error": f"AI Error: {chat_res.text}"}), chat_res.status_code
 
         ai_text = chat_res.json()["choices"][0]["message"]["content"]
 
-        # 3. ULOŽENÍ DO DATABÁZE (Novinka)
+        # 3. ULOŽENÍ
         with engine.connect() as conn:
             conn.execute(
                 text("INSERT INTO history (user_id, filename, original_text, ai_analysis) VALUES (:uid, :fn, :ot, :ai)"),
@@ -376,9 +414,9 @@ def analyze():
         })
 
     except sr.UnknownValueError:
-        return jsonify({"error": "AI nerozuměla nahrávce. Zkus mluvit zřetelněji a použij soubor .wav."}), 400
+        return jsonify({"error": "AI could not understand the audio. Please speak clearly."}), 400
     except Exception as e:
-        return jsonify({"error": f"Interní chyba: {str(e)}"}), 500
+        return jsonify({"error": f"Internal error: {str(e)}"}), 500
     finally:
         if os.path.exists(path):
             os.remove(path)
