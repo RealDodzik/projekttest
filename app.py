@@ -177,6 +177,15 @@ HTML_TEMPLATE = """
         .history-item { background: var(--result-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: left;}
         .label { font-weight: 700; color: var(--accent-color); text-transform: uppercase; font-size: 0.85em; margin-bottom: 8px; display: block; }
         
+        .result-box {
+            background: rgba(0,0,0,0.2); 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            border-left: 4px solid var(--accent-color);
+        }
+
         .error-msg { color: var(--error-color); font-weight: bold; margin-bottom: 15px; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -206,15 +215,19 @@ HTML_TEMPLATE = """
             </div>
             
             <div id="result" style="display:none; text-align: left; margin-top: 20px;">
-                <span class="label">AI Insight (English)</span>
-                <div id="ai_res" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; white-space: pre-wrap;"></div>
+                <span class="label">Původní přepis z audia:</span>
+                <div id="orig_text" class="result-box" style="color: var(--text-sub);"></div>
+
+                <span class="label">AI Analýza (English):</span>
+                <div id="ai_res" class="result-box"></div>
             </div>
 
             <h2>Historie</h2>
             {% for item in history %}
                 <div class="history-item">
                     <span class="label">{{ item[1] }} ({{ item[4] }})</span>
-                    <div>{{ item[3] }}</div>
+                    <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 10px;">{{ item[2] }}</div>
+                    <div style="border-top: 1px solid var(--border-color); padding-top: 10px;">{{ item[3] }}</div>
                 </div>
             {% endfor %}
 
@@ -260,6 +273,7 @@ HTML_TEMPLATE = """
             const fileInput = document.getElementById('mediaFile');
             const btn = document.getElementById('btn');
             const resDiv = document.getElementById('result');
+            const origRes = document.getElementById('orig_text');
             const aiRes = document.getElementById('ai_res');
 
             if (!fileInput.files[0]) {
@@ -267,16 +281,11 @@ HTML_TEMPLATE = """
                 return;
             }
 
-            if (fileInput.files[0].size > 1024 * 1024) {
-                alert("❌ Soubor je moc velký! Limit je 1MB. Tvůj má " + (fileInput.files[0].size / (1024*1024)).toFixed(2) + " MB.");
-                return;
-            }
-
             const formData = new FormData();
             formData.append("file", fileInput.files[0]);
 
             btn.disabled = true;
-            btn.innerText = "⏳ Pracuji...";
+            btn.innerText = "⏳ Analyzuji audio...";
             resDiv.style.display = "none";
 
             try {
@@ -288,6 +297,7 @@ HTML_TEMPLATE = """
                 const data = await response.json();
 
                 if (response.ok) {
+                    origRes.innerText = data.original_text;
                     aiRes.innerText = data.ai_analysis;
                     resDiv.style.display = "block";
                 } else {
@@ -314,6 +324,7 @@ def home():
     
     if 'user_id' in session:
         with engine.connect() as conn:
+            # Opravený SQL dotaz pro historii (obsahuje i original_text)
             result = conn.execute(
                 text("SELECT id, filename, original_text, ai_analysis, TO_CHAR(created_at, 'DD.MM.YYYY HH24:MI') FROM history WHERE user_id = :uid ORDER BY id DESC"),
                 {"uid": session['user_id']}
@@ -373,13 +384,13 @@ def analyze():
     f.save(path)
 
     try:
-        # 1. AUDIO -> TEXT (PŘEPNUTO NA ANGLIČTINU)
+        # 1. AUDIO -> TEXT (Vždy v AJ dle tvého testu)
         recognizer = sr.Recognizer()
         with sr.AudioFile(path) as source:
             audio_data = recognizer.record(source)
             text_result = recognizer.recognize_google(audio_data, language="en-US")
 
-        # 2. CHAT ANALÝZA (ANGLICKÝ PROMPT)
+        # 2. CHAT ANALÝZA
         chat_res = requests.post(
             f"{AI_BASE_URL}/chat/completions",
             json={
@@ -414,9 +425,9 @@ def analyze():
         })
 
     except sr.UnknownValueError:
-        return jsonify({"error": "AI could not understand the audio. Please speak clearly."}), 400
+        return jsonify({"error": "AI nerozuměla nahrávce. Zkus mluvit zřetelněji (anglicky) v .wav souboru."}), 400
     except Exception as e:
-        return jsonify({"error": f"Internal error: {str(e)}"}), 500
+        return jsonify({"error": f"Interní chyba: {str(e)}"}), 500
     finally:
         if os.path.exists(path):
             os.remove(path)
