@@ -3,3 +3,6 @@ Flask-Cors
 requests
 urllib3
 SpeechRecognition
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.49
+werkzeug
