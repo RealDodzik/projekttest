@@ -66,269 +66,362 @@ with engine.connect() as conn:
     conn.commit()
 
 
-# --- HTML ŠABLONA S JINJA2 ---
+# --- HTML ŠABLONA S JINJA2 (MODERN REHAUL v2) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Extractor (+AI Insight)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Text Extractor AI | Filip Kuba</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
-        // Okamžité načtení motivu zamezí "probliknutí" při načítání stránky
+        // Okamžité načtení motivu zamezí "probliknutí"
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
 
     <style>
         :root {
-            /* Light mode variables */
-            --bg-color: #f3f4f6;
-            --card-bg: #ffffff;
-            --text-main: #1f2937;
-            --text-sub: #6b7280;
-            --accent-color: #6366f1;
-            --accent-hover: #4f46e5;
-            --border-color: #e5e7eb;
-            --result-bg: #f9fafb;
-            --input-bg: #ffffff;
-            --error-color: #ef4444;
-            --success-color: #10b981;
-            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            /* --- DARK MODE (Default, Saturated, Deep) --- */
+            --bg-1: #040609;
+            --bg-2: #0a0f18;
+            --bg-3: #020406;
+            --card-bg: #0d121f;
+            --text-main: #ffffff;
+            --text-sub: #8b9bb4;
+            /* Sytá neonová fialová/růžová */
+            --accent-color: #d02df5; 
+            --accent-gradient: linear-gradient(135deg, #d02df5 0%, #810dfa 100%);
+            --accent-hover-glow: 0 0 20px rgba(208, 45, 245, 0.7);
+            
+            --border-color: #1f293a;
+            --input-bg: #080b12;
+            --result-bg: #040609;
+            
+            /* Syté barvy notifikací */
+            --error-color: #ff3333;
+            --success-color: #00e676;
+            
+            --panel-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        [data-theme="dark"] {
-            /* Dark mode variables */
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --accent-color: #818cf8;
-            --accent-hover: #6366f1;
-            --border-color: #334155;
-            --result-bg: #0f172a;
-            --input-bg: #1e293b;
-            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+        [data-theme="light"] {
+            /* --- LIGHT MODE (Saturated, Vivid) --- */
+            --bg-1: #e0e7ff;
+            --bg-2: #f0f4ff;
+            --bg-3: #d1d5db;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            /* Sytá modro-fialová */
+            --accent-color: #4f46e5;
+            --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --accent-hover-glow: 0 0 15px rgba(79, 70, 229, 0.5);
+            
+            --border-color: #e2e8f0;
+            --input-bg: #f8fafc;
+            --result-bg: #f1f5f9;
+            
+            --error-color: #dc2626;
+            --success-color: #16a34a;
+            --panel-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        /* --- Animované pozadí s gradientem --- */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         body { 
-            font-family: 'Inter', sans-serif; 
+            font-family: 'Poppins', sans-serif; 
             margin: 0; 
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: var(--bg-color); 
+            /* Aktivace animace pozadí */
+            background: linear-gradient(-45deg, var(--bg-1), var(--bg-2), var(--bg-3), var(--bg-1));
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            
             color: var(--text-main);
             padding: 20px;
             box-sizing: border-box;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: color 0.3s ease;
         }
 
         .container { 
             background: var(--card-bg); 
-            padding: 40px; 
-            border-radius: 20px; 
-            box-shadow: var(--shadow); 
+            padding: 50px; 
+            border-radius: 28px; 
+            box-shadow: var(--panel-shadow); 
             width: 100%;
-            max-width: 650px; 
+            max-width: 680px; 
             text-align: center;
             border: 1px solid var(--border-color);
             transition: var(--transition);
+            backdrop-filter: blur(10px); /* Lehké prosklení */
         }
 
         .header-actions {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 25px;
+            right: 25px;
             display: flex;
             gap: 15px;
             z-index: 1000;
             align-items: center;
         }
 
-        .icon-btn {
+        /* Styl pro switch motivu */
+        .theme-switch {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            width: 45px;
-            height: 45px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            font-size: 1.2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-size: 1.3rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             transition: var(--transition);
         }
 
-        .icon-btn:hover {
-            transform: scale(1.05);
+        .theme-switch:hover {
+            transform: rotate(15deg) scale(1.1);
             border-color: var(--accent-color);
+            color: var(--accent-color);
         }
 
-        h1 { color: var(--text-main); margin-bottom: 5px; font-weight: 700; font-size: 2.2em; letter-spacing: -0.5px; }
-        h1 span { color: var(--accent-color); }
-        h2 { font-size: 1.2em; color: var(--text-main); margin-top: 30px; font-weight: 600; text-align: left; }
-        .author { color: var(--text-sub); margin-bottom: 30px; font-weight: 500; font-size: 0.9em; }
+        h1 { color: var(--text-main); margin: 0 0 10px 0; font-weight: 700; font-size: 2.6em; letter-spacing: -1.5px; }
+        h1 span { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        h2 { font-size: 1.3em; color: var(--text-main); margin-top: 40px; font-weight: 600; text-align: left; letter-spacing: -0.5px;}
+        .author { color: var(--text-sub); margin-bottom: 40px; font-weight: 400; font-size: 0.95em; opacity: 0.8; }
 
         .form-section, .upload-section { 
-            border: 2px dashed var(--border-color); 
-            padding: 30px; 
-            border-radius: 16px; 
-            margin-bottom: 25px; 
-            background: var(--result-bg);
-            animation: fadeIn 0.5s ease;
+            border: 2px solid var(--border-color); 
+            padding: 35px; 
+            border-radius: 20px; 
+            margin-bottom: 30px; 
+            background: var(--input-bg);
+            animation: fadeInDown 0.5s ease;
             transition: var(--transition);
         }
 
         .form-section:hover, .upload-section:hover {
             border-color: var(--accent-color);
-        }
-
-        input[type="text"], input[type="password"], input[type="file"] {
-            margin-bottom: 20px;
-            width: 100%;
-            box-sizing: border-box;
-            color: var(--text-main);
+            box-shadow: 0 0 15px rgba(208, 45, 245, 0.1);
         }
 
         input[type="text"], input[type="password"] {
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            background: var(--input-bg);
+            padding: 16px 20px;
+            border-radius: 14px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-1);
             font-size: 1em;
+            color: var(--text-main);
             transition: var(--transition);
             outline: none;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         input[type="text"]:focus, input[type="password"]:focus {
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 0 4px rgba(208, 45, 245, 0.15);
+            background: var(--input-bg);
         }
 
+        /* Custom styl pro file input */
+        .file-input-wrapper { margin-bottom: 25px; text-align: left; }
+        input[type="file"] { color: var(--text-sub); font-size: 0.9em; }
         input[type="file"]::file-selector-button {
-            padding: 10px 16px;
-            border-radius: 8px;
+            padding: 12px 20px;
+            border-radius: 10px;
             border: none;
-            background: var(--accent-color);
-            color: white;
+            background: var(--border-color);
+            color: var(--text-main);
             font-weight: 600;
             cursor: pointer;
             margin-right: 15px;
             transition: var(--transition);
         }
-
         input[type="file"]::file-selector-button:hover {
-            background: var(--accent-hover);
+            background: var(--text-sub);
+            color: var(--bg-1);
+        }
+
+        /* --- ANIMOVANÁ TLAČÍTKA (BOMBA EFFECT) --- */
+        @keyframes buttonGlow {
+            0% { box-shadow: 0 4px 6px rgba(208, 45, 245, 0.4); }
+            50% { box-shadow: 0 4px 25px rgba(208, 45, 245, 0.7); }
+            100% { box-shadow: 0 4px 6px rgba(208, 45, 245, 0.4); }
         }
 
         button, .btn-link { 
-            background: var(--accent-color); 
+            background: var(--accent-gradient); 
             color: white; 
             border: none; 
-            padding: 14px 30px; 
-            border-radius: 12px; 
+            padding: 16px 35px; 
+            border-radius: 14px; 
             cursor: pointer; 
-            font-weight: 600; 
+            font-weight: 700; 
             font-size: 1.1em;
             width: 100%; 
             transition: var(--transition);
             text-decoration: none;
             display: inline-block;
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 4px 6px rgba(208, 45, 245, 0.4);
+            position: relative;
+            overflow: hidden;
         }
 
+        /* Hover animace buttonu */
         button:hover, .btn-link:hover { 
-            background: var(--accent-hover); 
-            transform: translateY(-2px); 
-            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.5);
+            transform: translateY(-4px) scale(1.02); 
+            /* Pulzující neon záře */
+            animation: buttonGlow 1.5s infinite;
         }
+
+        /* Click efekt */
+        button:active { transform: translateY(-1px) scale(0.99); }
 
         button:disabled {
-            background: var(--text-sub);
+            background: var(--border-color);
+            color: var(--text-sub);
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+            transform: none !important;
+            box-shadow: none !important;
+            animation: none !important;
         }
 
-        .toggle-auth-btn {
+        /* Alternativní tlačítko (Registrace/Zpět) */
+        .btn-alt {
             background: transparent;
             border: 2px solid var(--border-color);
             color: var(--text-main);
-            padding: 10px 20px;
+            box-shadow: none;
+        }
+        .btn-alt:hover {
+            background: rgba(255,255,255,0.03);
+            border-color: var(--text-sub);
+            color: var(--text-main);
+            animation: none;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Horní toggle tlačítko */
+        .toggle-auth-btn {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px 24px;
             border-radius: 50px;
             cursor: pointer;
             font-weight: 600;
             transition: var(--transition);
             text-decoration: none;
             font-size: 0.9em;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(5px);
         }
 
         .toggle-auth-btn:hover {
             border-color: var(--accent-color);
             color: var(--accent-color);
+            transform: translateY(-2px);
         }
 
-        .history-item { 
-            background: var(--result-bg); 
-            border: 1px solid var(--border-color); 
-            border-radius: 16px; 
-            padding: 20px; 
-            margin-bottom: 15px; 
-            text-align: left;
-            transition: var(--transition);
-        }
+        /* Výsledkové boxy */
+        #result { animation: fadeInUp 0.5s ease; }
+        .result-item-wrapper { margin-bottom: 25px; text-align: left; }
 
-        .history-item:hover {
-            border-color: var(--text-sub);
-        }
-
-        .label { 
-            font-weight: 700; 
-            color: var(--accent-color); 
-            text-transform: uppercase; 
-            font-size: 0.75em; 
-            letter-spacing: 0.5px;
-            margin-bottom: 8px; 
-            display: block; 
-        }
-        
         .result-box {
-            background: var(--input-bg); 
-            padding: 16px; 
-            border-radius: 12px; 
-            margin-bottom: 20px;
+            background: var(--bg-1); 
+            padding: 20px; 
+            border-radius: 16px; 
             white-space: pre-wrap;
             border: 1px solid var(--border-color);
             font-size: 0.95em;
-            line-height: 1.5;
+            line-height: 1.6;
+            color: var(--text-main);
         }
 
-        /* Notifikace - Úspěch a Chyba */
-        .msg { padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: 600; font-size: 0.95em; animation: fadeIn 0.4s ease; }
-        .error-msg { background: rgba(239, 68, 68, 0.1); color: var(--error-color); border: 1px solid rgba(239, 68, 68, 0.2); }
-        .success-msg { background: rgba(16, 185, 129, 0.1); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.2); }
+        /* Historie karty */
+        .history-item { 
+            background: var(--input-bg); 
+            border: 2px solid var(--border-color); 
+            border-radius: 18px; 
+            padding: 25px; 
+            margin-bottom: 20px; 
+            text-align: left;
+            transition: var(--transition);
+            position: relative;
+        }
 
-        hr { border: 0; height: 1px; background: var(--border-color); margin: 15px 0; }
+        .history-item:hover {
+            border-color: var(--accent-color);
+            transform: translateX(5px);
+            background: var(--card-bg);
+        }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .history-meta {
+            font-size: 0.8em;
+            color: var(--accent-color);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .history-filename {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: var(--text-main);
+            word-break: break-all;
+        }
+
+        .history-text-preview { font-size: 0.9em; color: var(--text-sub); line-height: 1.5; }
+        .history-ai-preview { font-size: 0.95em; color: var(--text-main); margin-top: 15px; border-left: 3px solid var(--accent-color); padding-left: 15px;}
+
+        /* --- Syté Notifikace (Flash messages) --- */
+        .msg { padding: 18px 25px; border-radius: 14px; margin-bottom: 30px; font-weight: 600; font-size: 1em; animation: fadeInDown 0.4s ease; text-align: left; display: flex; align-items: center; gap: 10px;}
+        
+        /* Červená pro chybu */
+        .error-msg { background: rgba(255, 51, 51, 0.15); color: var(--error-color); border: 2px solid var(--error-color); }
+        
+        /* Zelená pro úspěch */
+        .success-msg { background: rgba(0, 230, 118, 0.15); color: var(--success-color); border: 2px solid var(--success-color); }
+
+        /* Animace */
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Loader */
+        .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 4px solid var(--border-color); border-top: 4px solid var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     </style>
 </head>
 <body>
 
     <div class="header-actions">
-        <button class="icon-btn" id="themeToggle" onclick="toggleTheme()" title="Přepnout motiv">
+        <div class="theme-switch" id="themeToggle" onclick="toggleTheme()" title="Přepnout neon/light mód">
             🌙
-        </button>
+        </div>
         {% if 'user_id' not in session %}
-            <button class="toggle-auth-btn" onclick="toggleAuthSection()" id="authBtn">Vytvořit účet</button>
+            <button class="toggle-auth-btn" onclick="toggleAuthSection()" id="authBtn">Vytvořit nový účet</button>
         {% else %}
             <a href="/logout" class="toggle-auth-btn">Odhlásit se</a>
         {% endif %}
@@ -338,43 +431,57 @@ HTML_TEMPLATE = """
         <h1>Text Extractor <span>AI</span></h1>
         <p class="author">By Filip Kuba</p>
 
+        {# Zobrazení FLASH zpráv (chyby/úspěchy) #}
         {% if error %}
-            <div class="msg error-msg">⚠️ {{ error }}</div>
+            <div class="msg error-msg"><i>⚠️</i> {{ error }}</div>
         {% endif %}
         
         {% if success %}
-            <div class="msg success-msg">✅ {{ success }}</div>
+            <div class="msg success-msg"><i>✅</i> {{ success }}</div>
         {% endif %}
 
         {% if 'user_id' in session %}
+            {# --- SEKCE PRO PŘIHLÁŠENÉ (UPLOAD) --- #}
             <div class="upload-section">
-                <input type="file" id="mediaFile" accept=".wav">
-                <button onclick="upload()" id="btn">Analyzovat soubor</button>
+                <div class="file-input-wrapper">
+                    <span class="label">Vyberte nahrávku (.wav)</span>
+                    <input type="file" id="mediaFile" accept=".wav">
+                </div>
+                <button onclick="upload()" id="btn">Analyzovat nahrávku</button>
+                <div id="loader" class="loader"></div>
             </div>
             
-            <div id="result" style="display:none; text-align: left; margin-top: 25px;">
-                <span class="label">Původní přepis z audia</span>
-                <div id="orig_text" class="result-box" style="color: var(--text-sub);"></div>
+            {# Výsledky analýzy (skryté do AJAX requestu) #}
+            <div id="result" style="display:none; text-align: left;">
+                <div class="result-item-wrapper">
+                    <span class="label">📁 Původní přepis z audia</span>
+                    <div id="orig_text" class="result-box" style="color: var(--text-sub);"></div>
+                </div>
 
-                <span class="label">AI Analýza (English)</span>
-                <div id="ai_res" class="result-box" style="border-left: 4px solid var(--accent-color);"></div>
+                <div class="result-item-wrapper">
+                    <span class="label">🤖 AI Insight (English)</span>
+                    <div id="ai_res" class="result-box"></div>
+                </div>
+                <div style="height: 20px;"></div>
             </div>
 
+            {# Historie #}
             {% if history %}
-            <h2>Historie nahrávek</h2>
+            <h2>Historie tvých analýz</h2>
             {% for item in history %}
                 <div class="history-item">
-                    <span class="label">{{ item[1] }} • {{ item[4] }}</span>
-                    <div style="font-size: 0.9em; color: var(--text-sub); margin-bottom: 12px;">{{ item[2] }}</div>
-                    <hr>
-                    <div style="font-size: 0.95em;">{{ item[3] }}</div>
+                    <span class="history-meta">Analýza č. {{ item[0] }}</span>
+                    <div class="history-filename">{{ item[1] }} <span style="color:var(--text-sub); font-weight:400; font-size:0.8em;">• {{ item[4] }}</span></div>
+                    <div class="history-text-preview">{{ item[2] }}</div>
+                    <div class="history-ai-preview">{{ item[3] }}</div>
                 </div>
             {% endfor %}
             {% endif %}
 
         {% else %}
+            {# --- SEKCE PRO NEPŘIHLÁŠENÉ (LOGIN/REG) --- #}
             <div id="loginSection" class="form-section">
-                <h2 style="margin-top: 0; text-align: center;">Přihlášení</h2>
+                <h2 style="margin-top: 0; text-align: center; margin-bottom:30px;">Přihlášení</h2>
                 <form action="/login" method="POST">
                     <input type="text" name="username" placeholder="Uživatelské jméno" required autocomplete="username">
                     <input type="password" name="password" placeholder="Heslo" required autocomplete="current-password">
@@ -383,20 +490,21 @@ HTML_TEMPLATE = """
             </div>
 
             <div id="registerSection" class="form-section" style="display: none;">
-                <h2 style="margin-top: 0; text-align: center;">Nová registrace</h2>
+                <h2 style="margin-top: 0; text-align: center; margin-bottom:30px;">Nová registrace</h2>
                 <form action="/register" method="POST">
-                    <input type="text" name="username" placeholder="Zvolte si jméno" required autocomplete="username">
-                    <input type="password" name="password" placeholder="Zvolte si heslo" required autocomplete="new-password">
-                    <button type="submit" style="background: var(--text-main); color: var(--bg-color);">Založit účet</button>
+                    <input type="text" name="username" placeholder="Zvolte si uživatelské jméno" required autocomplete="username">
+                    <input type="password" name="password" placeholder="Zvolte si bezpečné heslo" required autocomplete="new-password">
+                    <button type="submit" class="btn-alt">Vytvořit účet</button>
                 </form>
             </div>
         {% endif %}
     </div>
 
     <script>
-        // Logika pro tmavý/světlý režim
+        // --- Logika pro Tmavý/Světlý režim (Syté barvy) ---
         function updateThemeIcon() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
+            // Sluníčko pro tmavý (přepne na světlý), měsíc pro světlý
             document.getElementById('themeToggle').innerText = currentTheme === 'dark' ? '☀️' : '🌙';
         }
         
@@ -405,14 +513,14 @@ HTML_TEMPLATE = """
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             
             document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
+            localStorage.setItem('theme', newTheme); // Uložení volby
             updateThemeIcon();
         }
 
-        // Inicializace ikonky po načtení DOMu
+        // Inicializace ikonky po načtení
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
 
-        // Přepínání formulářů
+        // --- Přepínání formulářů (Login/Register) ---
         function toggleAuthSection() {
             const login = document.getElementById('loginSection');
             const register = document.getElementById('registerSection');
@@ -421,7 +529,7 @@ HTML_TEMPLATE = """
             if (login.style.display === 'none') {
                 login.style.display = 'block';
                 register.style.display = 'none';
-                btn.innerText = 'Vytvořit účet';
+                btn.innerText = 'Vytvořit nový účet';
             } else {
                 login.style.display = 'none';
                 register.style.display = 'block';
@@ -429,23 +537,27 @@ HTML_TEMPLATE = """
             }
         }
 
+        // --- AJAX Upload a Analýza ---
         async function upload() {
             const fileInput = document.getElementById('mediaFile');
             const btn = document.getElementById('btn');
+            const loader = document.getElementById('loader');
             const resDiv = document.getElementById('result');
             const origRes = document.getElementById('orig_text');
             const aiRes = document.getElementById('ai_res');
 
             if (!fileInput.files[0]) {
-                alert("⚠️ Vyberte soubor .wav");
+                alert("⚠️ Vyberte prosím soubor ve formátu .wav");
                 return;
             }
 
             const formData = new FormData();
             formData.append("file", fileInput.files[0]);
 
+            // UI State: Loading
             btn.disabled = true;
-            btn.innerText = "⏳ Analyzuji audio...";
+            btn.innerText = "⏳ Probíhá analýza (může to trvat)...";
+            loader.style.display = "block";
             resDiv.style.display = "none";
 
             try {
@@ -457,19 +569,27 @@ HTML_TEMPLATE = """
                 const data = await response.json();
 
                 if (response.ok) {
+                    // Úspěch: Zobrazit výsledky
                     origRes.innerText = data.original_text;
                     aiRes.innerText = data.ai_analysis;
                     resDiv.style.display = "block";
+                    
+                    // Volitelné: Scroll dolů na výsledek
+                    resDiv.scrollIntoView({ behavior: 'smooth' });
                 } else {
-                    alert("Chyba: " + (data.error || "Neznámá chyba"));
+                    // Chyba ze serveru
+                    alert("Chyba: " + (data.error || "Neznámá chyba při analýze."));
                 }
             } catch (err) {
-                alert("Chyba spojení se serverem.");
+                // Chyba sítě
+                alert("Chyba: Nelze se spojit se serverem.");
+                print(err);
             } finally {
+                // UI State: Reset
                 btn.disabled = false;
-                btn.innerText = "Analyzovat soubor";
-                // Znovu naformátovat formulář po odeslání
-                fileInput.value = "";
+                btn.innerText = "Analyzovat nahrávku";
+                loader.style.display = "none";
+                fileInput.value = ""; // Vyčistit input
             }
         }
     </script>
@@ -477,19 +597,20 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# --- ROUTY ---
+# --- ROUTY (Backend zůstává stejný, jen přidáváme 'success' do redirectů) ---
 
 @app.route("/")
 def home():
-    # Získání obou zpráv (úspěch i chyba) z URL parametrů
+    # Získání zpráv z URL parametrů (flash náhrada)
     error = request.args.get("error")
     success = request.args.get("success")
     history_data = []
     
     if 'user_id' in session:
         with engine.connect() as conn:
+            # SQL dotaz pro historii (limitován pro přehlednost, řazen sestupně)
             result = conn.execute(
-                text("SELECT id, filename, original_text, ai_analysis, TO_CHAR(created_at, 'DD.MM.YYYY HH24:MI') FROM history WHERE user_id = :uid ORDER BY id DESC"),
+                text("SELECT id, filename, original_text, ai_analysis, TO_CHAR(created_at, 'DD.MM.YYYY HH24:MI') FROM history WHERE user_id = :uid ORDER BY id DESC LIMIT 20"),
                 {"uid": session['user_id']}
             )
             history_data = result.fetchall()
@@ -498,63 +619,81 @@ def home():
 
 @app.route("/register", methods=["POST"])
 def register():
-    username = request.form.get("username")
+    username = request.form.get("username").strip()
     password = request.form.get("password")
     
+    if not username or not password:
+         return redirect(url_for('home', error="Vyplňte prosím všechna pole."))
+
     with engine.connect() as conn:
+        # Zkontrolovat, zda uživatel už neexistuje
         existing = conn.execute(text("SELECT id FROM users WHERE username = :u"), {"u": username}).fetchone()
         if existing:
-            return redirect(url_for('home', error="Uživatelské jméno už existuje."))
+            return redirect(url_for('home', error="Toto uživatelské jméno je již obsazené."))
         
+        # Uložit nového s hashem hesla
         hashed_pw = generate_password_hash(password)
         conn.execute(text("INSERT INTO users (username, password_hash) VALUES (:u, :p)"), {"u": username, "p": hashed_pw})
         conn.commit()
         
-    # Pokud se to povede, vracíme success parametr
+    # ÚSPĚCH -> zelená zpráva
     return redirect(url_for('home', success="Registrace byla úspěšná! Nyní se můžeš přihlásit."))
 
 @app.route("/login", methods=["POST"])
 def login():
-    username = request.form.get("username")
+    username = request.form.get("username").strip()
     password = request.form.get("password")
     
     with engine.connect() as conn:
         user = conn.execute(text("SELECT id, username, password_hash FROM users WHERE username = :u"), {"u": username}).fetchone()
         
+        # Ověření uživatele a hesla
         if user and check_password_hash(user[2], password):
+            # Vytvoření session
             session['user_id'] = user[0]
             session['username'] = user[1]
             return redirect(url_for('home', success=f"Vítej zpět, {username}!"))
         else:
-            return redirect(url_for('home', error="Špatné jméno nebo heslo."))
+            # CHYBA -> červená zpráva
+            return redirect(url_for('home', error="Nesprávné uživatelské jméno nebo heslo."))
 
 @app.route("/logout")
 def logout():
+    # Vyčištění session
     session.pop('user_id', None)
     session.pop('username', None)
     return redirect(url_for('home', success="Byl jsi úspěšně odhlášen."))
 
 @app.route("/ai", methods=["POST"])
 def analyze():
+    # API Zabezpečení - jen pro přihlášené
     if 'user_id' not in session:
-        return jsonify({"error": "Musíš být přihlášený!"}), 401
+        return jsonify({"error": "Pro tuto akci musíte být přihlášeni."}), 401
 
     if "file" not in request.files:
-        return jsonify({"error": "Nebyl nahrán žádný soubor"}), 400
+        return jsonify({"error": "Nebyl nahrán žádný soubor."}), 400
     
     f = request.files["file"]
-    ext = f.filename.split('.')[-1].upper() if '.' in f.filename else "Unknown"
-    path = os.path.join(UPLOAD_FOLDER, f.filename)
+    
+    if f.filename == '':
+        return jsonify({"error": "Nebyl vybrán žádný soubor."}), 400
+
+    # Sanitize filename a uložení
+    safe_filename = "".join([c for c in f.filename if c.isalpha() or c.isdigit() or c==' ' or c=='.' or c=='_']).rstrip()
+    ext = safe_filename.split('.')[-1].upper() if '.' in safe_filename else "Unknown"
+    
+    path = os.path.join(UPLOAD_FOLDER, safe_filename)
     f.save(path)
 
     try:
-        # 1. AUDIO -> TEXT
+        # 1. AUDIO -> TEXT (Převod na text)
         recognizer = sr.Recognizer()
         with sr.AudioFile(path) as source:
             audio_data = recognizer.record(source)
+            # Používáme angličtinu, jak bylo nastaveno dříve
             text_result = recognizer.recognize_google(audio_data, language="en-US")
 
-        # 2. CHAT ANALÝZA
+        # 2. CHAT ANALÝZA (AI Shrnutí)
         chat_res = requests.post(
             f"{AI_BASE_URL}/chat/completions",
             json={
@@ -565,12 +704,12 @@ def analyze():
                 }]
             },
             headers={"Authorization": f"Bearer {AI_API_KEY}"},
-            verify=False,
-            timeout=45
+            verify=False, # Kvůli školnímu certifikátu
+            timeout=60 # Zvýšený timeout pro větší nahrávky
         )
         
         if chat_res.status_code != 200:
-            return jsonify({"error": f"AI Error: {chat_res.text}"}), chat_res.status_code
+            return jsonify({"error": f"Chyba AI modulu: {chat_res.text}"}), chat_res.status_code
 
         ai_text = chat_res.json()["choices"][0]["message"]["content"]
 
@@ -578,10 +717,11 @@ def analyze():
         with engine.connect() as conn:
             conn.execute(
                 text("INSERT INTO history (user_id, filename, original_text, ai_analysis) VALUES (:uid, :fn, :ot, :ai)"),
-                {"uid": session['user_id'], "fn": f.filename, "ot": text_result, "ai": ai_text}
+                {"uid": session['user_id'], "fn": safe_filename, "ot": text_result, "ai": ai_text}
             )
             conn.commit()
 
+        # Návrat dat pro AJAX
         return jsonify({
             "media_type": ext,
             "original_text": text_result,
@@ -589,13 +729,17 @@ def analyze():
         })
 
     except sr.UnknownValueError:
-        return jsonify({"error": "AI nerozuměla nahrávce. Zkus mluvit zřetelněji (anglicky) v .wav souboru."}), 400
+        return jsonify({"error": "AI nerozuměla obsahu nahrávky. Ujistěte se, že je nahrávka čistá a v angličtině."}), 400
+    except requests.exceptions.Timeout:
+         return jsonify({"error": "Požadavek na AI modul vypršel. Nahrávka je pravděpodobně příliš dlouhá."}), 504
     except Exception as e:
-        return jsonify({"error": f"Interní chyba: {str(e)}"}), 500
+        return jsonify({"error": f"Interní chyba serveru: {str(e)}"}), 500
     finally:
+        # Smazání dočasného souboru
         if os.path.exists(path):
             os.remove(path)
 
 if __name__ == "__main__":
+    # Spuštění Flask aplikace
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
