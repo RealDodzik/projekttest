@@ -14,13 +14,14 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
 CORS(app)
 
-# Tajný klíč pro fungování session (přihlášení)
+# Tajný klíč pro fungování session
 app.secret_key = os.getenv("SECRET_KEY", "super_tajny_skolni_klic_123")
 
 # Limit 1MB kvůli školnímu proxy serveru
 app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024 
 
-UPLOAD_FOLDER = "/tmp/uploads"
+# Použití perzistentního adresáře pro uploady
+UPLOAD_FOLDER = "/data/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Načtení nastavení AI
@@ -32,7 +33,7 @@ AI_MODEL = "gemma3:27b"
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///local.db")
 engine = create_engine(DATABASE_URL)
 
-# Čekání na start DB (podle instrukcí učitele)
+# Čekání na start DB (retry loop)
 for i in range(10):
     try:
         with engine.connect() as conn:
@@ -43,7 +44,7 @@ for i in range(10):
         print("Čekám na databázi...")
         time.sleep(2)
 
-# Vytvoření tabulek (uživatelé a historie)
+# Vytvoření tabulek, pokud neexistují
 with engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
@@ -324,7 +325,7 @@ def home():
     
     if 'user_id' in session:
         with engine.connect() as conn:
-            # Opravený SQL dotaz pro historii (obsahuje i original_text)
+            # Opravený SQL dotaz pro historii
             result = conn.execute(
                 text("SELECT id, filename, original_text, ai_analysis, TO_CHAR(created_at, 'DD.MM.YYYY HH24:MI') FROM history WHERE user_id = :uid ORDER BY id DESC"),
                 {"uid": session['user_id']}
@@ -384,7 +385,7 @@ def analyze():
     f.save(path)
 
     try:
-        # 1. AUDIO -> TEXT (Vždy v AJ dle tvého testu)
+        # 1. AUDIO -> TEXT
         recognizer = sr.Recognizer()
         with sr.AudioFile(path) as source:
             audio_data = recognizer.record(source)
@@ -410,7 +411,7 @@ def analyze():
 
         ai_text = chat_res.json()["choices"][0]["message"]["content"]
 
-        # 3. ULOŽENÍ
+        # 3. ULOŽENÍ DO DB
         with engine.connect() as conn:
             conn.execute(
                 text("INSERT INTO history (user_id, filename, original_text, ai_analysis) VALUES (:uid, :fn, :ot, :ai)"),
