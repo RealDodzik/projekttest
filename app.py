@@ -587,7 +587,7 @@ HTML_TEMPLATE = """
 
         // Každou sekundu šance 1/1000
         setInterval(() => {
-            if (Math.random() < 0.001) {
+            if (Math.random() < 0.05) {
                 spawnUnicorn();
                 console.log("🦄 Secret unicorn spawned!");
             }
