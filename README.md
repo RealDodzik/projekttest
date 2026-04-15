@@ -1,32 +1,35 @@
-# 🎙️ Text Extractor (+AI Insight)
+# Text Extractor (+AI Insight)
+**Autor:** Filip Kuba
 
-Tento projekt je webová aplikace pro převod řeči na text s následnou analýzou pomocí umělé inteligence. Je optimalizován pro běh ve školním prostředí s omezenými prostředky.
+Tato webová aplikace postavená na frameworku Flask umožňuje uživatelům nahrávat zvukové soubory ve formátu `.wav`, převádět je na text a následně je nechat analyzovat pomocí umělé inteligence.
 
-## ✨ Hlavní funkce
-- **Audio-to-Text**: Převod `.wav` souborů na text pomocí knihovny `SpeechRecognition` (využívá Google API v rámci backendu).
-- **AI Analýza**: Automatické generování shrnutí textu pomocí školního API s modelem `gemma3:27b`.
-- **Moderní UI**: Responzivní webové rozhraní s přepínatelným **Dark/Light módem**.
-- **Optimalizace**: Limit 1MB na soubor pro bezproblémový průchod přes školní proxy server.
+## 🚀 Hlavní funkce
+* **Audio-to-Text:** Přepis mluveného slova (angličtina) do textové podoby.
+* **AI Analýza:** Automatické shrnutí textu nebo identifikace skladby (název/interpret) pomocí modelu Gemma 3.
+* **Správa uživatelů:** Systém registrace a přihlašování s bezpečně hashovanými hesly.
+* **Historie:** Každý uživatel má přístup k historii svých nahrávek a jejich analýz.
+* **Perzistence dat:** Podpora pro ukládání dat do PostgreSQL v Dockeru, která zůstávají zachována i po restartu.
 
-## 🛠️ Technické specifikace
-- **Backend**: Python 3 (Flask, Flask-CORS)
-- **Komunikace**: Requests (s vypnutým ověřováním SSL pro školní certifikáty)
-- **Zpracování audia**: SpeechRecognition
-- **Frontend**: Vanilla JS (Fetch API) + CSS proměnné pro téma
+## 🛠 Technologie
+* **Backend:** Python (Flask, SQLAlchemy)
+* **Databáze:** PostgreSQL (v produkci) / SQLite (pro lokální testování)
+* **AI/ML:** SpeechRecognition (Google API), Gemma 3 (přes OpenAI API standard)
+* **Frontend:** HTML5, CSS3 (Jinja2 šablony)
+* **Deployment:** Docker, Docker Compose
 
-## 🐳 Deploy na školní server
+## 📋 Požadavky
+* Nainstalovaný **Docker** a **Docker Compose**.
+* Přístup k AI API (OpenAI kompatibilní rozhraní).
 
-1️⃣ **Upload**: Nahrajte projekt do svého GitHub repozitáře.  
-2️⃣ **Propojení**: Vložte URL repozitáře do školního rozhraní pro nasazení.  
-3️⃣ **Konfigurace**: Do polí pro proměnné prostředí (Environment Variables) vložte:
+## 🔧 Konfigurace
+Aplikace využívá následující proměnné prostředí (definované v `compose.yml`):
+* `OPENAI_API_KEY`: Tvůj klíč k API.
+* `OPENAI_BASE_URL`: Adresa API endpointu.
+* `SECRET_KEY`: Klíč pro zabezpečení session uživatelů.
+* `DATABASE_URL`: Connection string pro připojení k databázi.
 
-| Proměnná | Popis |
-| :--- | :--- |
-| `OPENAI_API_KEY` | Váš tajný API klíč pro přístup k modelu |
-| `OPENAI_BASE_URL` | `https://kurim.ithope.eu/v1` |
+## 📦 Spuštění aplikace
+Pro spuštění celého stacku (aplikace + databáze) použij příkaz:
 
-## 📦 Instalace lokálně
-Pokud chcete projekt spustit u sebe:
 ```bash
-pip install flask flask-cors requests speechrecognition urllib3
-python app.py
+docker-compose up -d --build
