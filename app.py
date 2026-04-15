@@ -587,11 +587,11 @@ HTML_TEMPLATE = """
 
         // Každou sekundu šance 1/1000
         setInterval(() => {
-            if (Math.random() < 0.5) {
+            if (Math.random() < 1) {
                 spawnUnicorn();
                 console.log("🦄 Secret unicorn spawned!");
             }
-        }, 1000);
+        }, 100);
         // --- AJAX Upload a Analýza ---
         async function upload() {
             const fileInput = document.getElementById('mediaFile');
