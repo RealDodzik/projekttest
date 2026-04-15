@@ -73,24 +73,49 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Filip Kuba - Text Extractor (+AI Insight)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Text Extractor (+AI Insight)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        // Okamžité načtení motivu zamezí "probliknutí" při načítání stránky
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
     <style>
         :root {
-            --bg-color: #1a1a2e;
-            --card-bg: #16213e;
-            --text-main: #e9ecef;
-            --text-sub: #a2a8d3;
-            --accent-color: #7209b7;
-            --accent-hover: #560bad;
-            --border-color: #24344d;
-            --result-bg: #0f172a;
-            --error-color: #e63946;
+            /* Light mode variables */
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --accent-color: #6366f1;
+            --accent-hover: #4f46e5;
+            --border-color: #e5e7eb;
+            --result-bg: #f9fafb;
+            --input-bg: #ffffff;
+            --error-color: #ef4444;
+            --success-color: #10b981;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        [data-theme="dark"] {
+            /* Dark mode variables */
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --accent-color: #818cf8;
+            --accent-hover: #6366f1;
+            --border-color: #334155;
+            --result-bg: #0f172a;
+            --input-bg: #1e293b;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+        }
+
         body { 
-            font-family: 'Quicksand', sans-serif; 
+            font-family: 'Inter', sans-serif; 
             margin: 0; 
             display: flex;
             justify-content: center;
@@ -100,16 +125,19 @@ HTML_TEMPLATE = """
             color: var(--text-main);
             padding: 20px;
             box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container { 
             background: var(--card-bg); 
             padding: 40px; 
-            border-radius: 24px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            border-radius: 20px; 
+            box-shadow: var(--shadow); 
             width: 100%;
             max-width: 650px; 
             text-align: center;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
         }
 
         .header-actions {
@@ -117,21 +145,49 @@ HTML_TEMPLATE = """
             top: 20px;
             right: 20px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
             z-index: 1000;
+            align-items: center;
         }
 
-        h1 { color: var(--accent-color); margin-bottom: 5px; font-weight: 700; font-size: 2.2em; }
-        h2 { font-size: 1.2em; color: var(--text-main); margin-top: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;}
-        .author { color: var(--text-sub); margin-bottom: 30px; font-weight: 600; }
+        .icon-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-color);
+        }
+
+        h1 { color: var(--text-main); margin-bottom: 5px; font-weight: 700; font-size: 2.2em; letter-spacing: -0.5px; }
+        h1 span { color: var(--accent-color); }
+        h2 { font-size: 1.2em; color: var(--text-main); margin-top: 30px; font-weight: 600; text-align: left; }
+        .author { color: var(--text-sub); margin-bottom: 30px; font-weight: 500; font-size: 0.9em; }
 
         .form-section, .upload-section { 
             border: 2px dashed var(--border-color); 
             padding: 30px; 
-            border-radius: 20px; 
+            border-radius: 16px; 
             margin-bottom: 25px; 
-            background: rgba(114, 9, 183, 0.05);
+            background: var(--result-bg);
             animation: fadeIn 0.5s ease;
+            transition: var(--transition);
+        }
+
+        .form-section:hover, .upload-section:hover {
+            border-color: var(--accent-color);
         }
 
         input[type="text"], input[type="password"], input[type="file"] {
@@ -142,71 +198,152 @@ HTML_TEMPLATE = """
         }
 
         input[type="text"], input[type="password"] {
-            padding: 12px;
-            border-radius: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
             border: 1px solid var(--border-color);
-            background: var(--bg-color);
+            background: var(--input-bg);
+            font-size: 1em;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        input[type="file"]::file-selector-button {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 15px;
+            transition: var(--transition);
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: var(--accent-hover);
         }
 
         button, .btn-link { 
             background: var(--accent-color); 
             color: white; 
             border: none; 
-            padding: 15px 30px; 
-            border-radius: 15px; 
+            padding: 14px 30px; 
+            border-radius: 12px; 
             cursor: pointer; 
-            font-weight: 700; 
+            font-weight: 600; 
             font-size: 1.1em;
             width: 100%; 
             transition: var(--transition);
             text-decoration: none;
             display: inline-block;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
         }
-        button:hover, .btn-link:hover { background: var(--accent-hover); transform: translateY(-2px); }
+
+        button:hover, .btn-link:hover { 
+            background: var(--accent-hover); 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.5);
+        }
+
+        button:disabled {
+            background: var(--text-sub);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
 
         .toggle-auth-btn {
-            background: var(--card-bg);
-            border: 2px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 10px 15px;
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 20px;
             border-radius: 50px;
             cursor: pointer;
-            font-weight: 700;
+            font-weight: 600;
+            transition: var(--transition);
+            text-decoration: none;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+        }
+
+        .toggle-auth-btn:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .history-item { 
+            background: var(--result-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            text-align: left;
             transition: var(--transition);
         }
 
-        .history-item { background: var(--result-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: left;}
-        .label { font-weight: 700; color: var(--accent-color); text-transform: uppercase; font-size: 0.85em; margin-bottom: 8px; display: block; }
+        .history-item:hover {
+            border-color: var(--text-sub);
+        }
+
+        .label { 
+            font-weight: 700; 
+            color: var(--accent-color); 
+            text-transform: uppercase; 
+            font-size: 0.75em; 
+            letter-spacing: 0.5px;
+            margin-bottom: 8px; 
+            display: block; 
+        }
         
         .result-box {
-            background: rgba(0,0,0,0.2); 
-            padding: 15px; 
+            background: var(--input-bg); 
+            padding: 16px; 
             border-radius: 12px; 
             margin-bottom: 20px;
             white-space: pre-wrap;
-            border-left: 4px solid var(--accent-color);
+            border: 1px solid var(--border-color);
+            font-size: 0.95em;
+            line-height: 1.5;
         }
 
-        .error-msg { color: var(--error-color); font-weight: bold; margin-bottom: 15px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Notifikace - Úspěch a Chyba */
+        .msg { padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: 600; font-size: 0.95em; animation: fadeIn 0.4s ease; }
+        .error-msg { background: rgba(239, 68, 68, 0.1); color: var(--error-color); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .success-msg { background: rgba(16, 185, 129, 0.1); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        hr { border: 0; height: 1px; background: var(--border-color); margin: 15px 0; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body data-theme="dark">
+<body>
 
     <div class="header-actions">
+        <button class="icon-btn" id="themeToggle" onclick="toggleTheme()" title="Přepnout motiv">
+            🌙
+        </button>
         {% if 'user_id' not in session %}
-            <button class="toggle-auth-btn" onclick="toggleAuth()" id="authBtn">📝 Registrace</button>
+            <button class="toggle-auth-btn" onclick="toggleAuthSection()" id="authBtn">Vytvořit účet</button>
         {% else %}
-            <a href="/logout" class="toggle-auth-btn" style="text-decoration: none;">🚪 Odhlásit</a>
+            <a href="/logout" class="toggle-auth-btn">Odhlásit se</a>
         {% endif %}
     </div>
 
     <div class="container">
-        <h1>Text Extractor (+AI Insight)</h1>
+        <h1>Text Extractor <span>AI</span></h1>
         <p class="author">By Filip Kuba</p>
 
         {% if error %}
-            <div class="error-msg">{{ error }}</div>
+            <div class="msg error-msg">⚠️ {{ error }}</div>
+        {% endif %}
+        
+        {% if success %}
+            <div class="msg success-msg">✅ {{ success }}</div>
         {% endif %}
 
         {% if 'user_id' in session %}
@@ -215,46 +352,68 @@ HTML_TEMPLATE = """
                 <button onclick="upload()" id="btn">Analyzovat soubor</button>
             </div>
             
-            <div id="result" style="display:none; text-align: left; margin-top: 20px;">
-                <span class="label">Původní přepis z audia:</span>
+            <div id="result" style="display:none; text-align: left; margin-top: 25px;">
+                <span class="label">Původní přepis z audia</span>
                 <div id="orig_text" class="result-box" style="color: var(--text-sub);"></div>
 
-                <span class="label">AI Analýza (English):</span>
-                <div id="ai_res" class="result-box"></div>
+                <span class="label">AI Analýza (English)</span>
+                <div id="ai_res" class="result-box" style="border-left: 4px solid var(--accent-color);"></div>
             </div>
 
-            <h2>Historie</h2>
+            {% if history %}
+            <h2>Historie nahrávek</h2>
             {% for item in history %}
                 <div class="history-item">
-                    <span class="label">{{ item[1] }} ({{ item[4] }})</span>
-                    <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 10px;">{{ item[2] }}</div>
-                    <div style="border-top: 1px solid var(--border-color); padding-top: 10px;">{{ item[3] }}</div>
+                    <span class="label">{{ item[1] }} • {{ item[4] }}</span>
+                    <div style="font-size: 0.9em; color: var(--text-sub); margin-bottom: 12px;">{{ item[2] }}</div>
+                    <hr>
+                    <div style="font-size: 0.95em;">{{ item[3] }}</div>
                 </div>
             {% endfor %}
+            {% endif %}
 
         {% else %}
             <div id="loginSection" class="form-section">
-                <h2>Přihlášení</h2>
+                <h2 style="margin-top: 0; text-align: center;">Přihlášení</h2>
                 <form action="/login" method="POST">
-                    <input type="text" name="username" placeholder="Uživatelské jméno" required>
-                    <input type="password" name="password" placeholder="Heslo" required>
-                    <button type="submit">Vstoupit</button>
+                    <input type="text" name="username" placeholder="Uživatelské jméno" required autocomplete="username">
+                    <input type="password" name="password" placeholder="Heslo" required autocomplete="current-password">
+                    <button type="submit">Vstoupit do aplikace</button>
                 </form>
             </div>
 
             <div id="registerSection" class="form-section" style="display: none;">
-                <h2>Nová registrace</h2>
+                <h2 style="margin-top: 0; text-align: center;">Nová registrace</h2>
                 <form action="/register" method="POST">
-                    <input type="text" name="username" placeholder="Zvolte jméno" required>
-                    <input type="password" name="password" placeholder="Zvolte heslo" required>
-                    <button type="submit" style="background: #444;">Vytvořit účet</button>
+                    <input type="text" name="username" placeholder="Zvolte si jméno" required autocomplete="username">
+                    <input type="password" name="password" placeholder="Zvolte si heslo" required autocomplete="new-password">
+                    <button type="submit" style="background: var(--text-main); color: var(--bg-color);">Založit účet</button>
                 </form>
             </div>
         {% endif %}
     </div>
 
     <script>
-        function toggleAuth() {
+        // Logika pro tmavý/světlý režim
+        function updateThemeIcon() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            document.getElementById('themeToggle').innerText = currentTheme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon();
+        }
+
+        // Inicializace ikonky po načtení DOMu
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+
+        // Přepínání formulářů
+        function toggleAuthSection() {
             const login = document.getElementById('loginSection');
             const register = document.getElementById('registerSection');
             const btn = document.getElementById('authBtn');
@@ -262,11 +421,11 @@ HTML_TEMPLATE = """
             if (login.style.display === 'none') {
                 login.style.display = 'block';
                 register.style.display = 'none';
-                btn.innerText = '📝 Registrace';
+                btn.innerText = 'Vytvořit účet';
             } else {
                 login.style.display = 'none';
                 register.style.display = 'block';
-                btn.innerText = '🔑 Přihlášení';
+                btn.innerText = 'Zpět na přihlášení';
             }
         }
 
@@ -309,6 +468,8 @@ HTML_TEMPLATE = """
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Analyzovat soubor";
+                // Znovu naformátovat formulář po odeslání
+                fileInput.value = "";
             }
         }
     </script>
@@ -320,19 +481,20 @@ HTML_TEMPLATE = """
 
 @app.route("/")
 def home():
+    # Získání obou zpráv (úspěch i chyba) z URL parametrů
     error = request.args.get("error")
+    success = request.args.get("success")
     history_data = []
     
     if 'user_id' in session:
         with engine.connect() as conn:
-            # Opravený SQL dotaz pro historii
             result = conn.execute(
                 text("SELECT id, filename, original_text, ai_analysis, TO_CHAR(created_at, 'DD.MM.YYYY HH24:MI') FROM history WHERE user_id = :uid ORDER BY id DESC"),
                 {"uid": session['user_id']}
             )
             history_data = result.fetchall()
             
-    return render_template_string(HTML_TEMPLATE, history=history_data, error=error)
+    return render_template_string(HTML_TEMPLATE, history=history_data, error=error, success=success)
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -348,7 +510,8 @@ def register():
         conn.execute(text("INSERT INTO users (username, password_hash) VALUES (:u, :p)"), {"u": username, "p": hashed_pw})
         conn.commit()
         
-    return redirect(url_for('home', error="Registrace úspěšná! Můžeš se přihlásit."))
+    # Pokud se to povede, vracíme success parametr
+    return redirect(url_for('home', success="Registrace byla úspěšná! Nyní se můžeš přihlásit."))
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -361,7 +524,7 @@ def login():
         if user and check_password_hash(user[2], password):
             session['user_id'] = user[0]
             session['username'] = user[1]
-            return redirect(url_for('home'))
+            return redirect(url_for('home', success=f"Vítej zpět, {username}!"))
         else:
             return redirect(url_for('home', error="Špatné jméno nebo heslo."))
 
@@ -369,7 +532,7 @@ def login():
 def logout():
     session.pop('user_id', None)
     session.pop('username', None)
-    return redirect(url_for('home'))
+    return redirect(url_for('home', success="Byl jsi úspěšně odhlášen."))
 
 @app.route("/ai", methods=["POST"])
 def analyze():
