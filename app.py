@@ -8,32 +8,25 @@ from flask_cors import CORS
 from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Vypnutí varování pro školní SSL certifikáty
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 CORS(app)
 
-# Tajný klíč pro fungování session
 app.secret_key = os.getenv("SECRET_KEY", "super_tajny_skolni_klic_123")
 
-# Limit 1MB kvůli školnímu proxy serveru
 app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024 
 
-# Použití perzistentního adresáře pro uploady
 UPLOAD_FOLDER = "/data/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Načtení nastavení AI
 AI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 AI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://kurim.ithope.eu/v1")
 AI_MODEL = "gemma3:27b" 
 
-# --- DATABÁZE ---
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///local.db")
 engine = create_engine(DATABASE_URL)
 
-# Čekání na start DB (retry loop)
 for i in range(10):
     try:
         with engine.connect() as conn:
@@ -44,7 +37,6 @@ for i in range(10):
         print("Čekám na databázi...")
         time.sleep(2)
 
-# Vytvoření tabulek, pokud neexistují
 with engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
@@ -66,7 +58,6 @@ with engine.connect() as conn:
     conn.commit()
 
 
-# --- HTML ŠABLONA S JINJA2 (MODERN REHAUL v2) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="cs">
@@ -77,21 +68,18 @@ HTML_TEMPLATE = """
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
-        // Okamžité načtení motivu zamezí "probliknutí"
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
 
     <style>
         :root {
-            /* --- DARK MODE (Default, Saturated, Deep) --- */
             --bg-1: #040609;
             --bg-2: #0a0f18;
             --bg-3: #020406;
             --card-bg: #0d121f;
             --text-main: #ffffff;
             --text-sub: #8b9bb4;
-            /* Sytá neonová fialová/růžová */
             --accent-color: #d02df5; 
             --accent-gradient: linear-gradient(135deg, #d02df5 0%, #810dfa 100%);
             --accent-hover-glow: 0 0 20px rgba(208, 45, 245, 0.7);
@@ -100,7 +88,6 @@ HTML_TEMPLATE = """
             --input-bg: #080b12;
             --result-bg: #040609;
             
-            /* Syté barvy notifikací */
             --error-color: #ff3333;
             --success-color: #00e676;
             
@@ -109,14 +96,12 @@ HTML_TEMPLATE = """
         }
 
         [data-theme="light"] {
-            /* --- LIGHT MODE (Saturated, Vivid) --- */
             --bg-1: #e0e7ff;
             --bg-2: #f0f4ff;
             --bg-3: #d1d5db;
             --card-bg: #ffffff;
             --text-main: #0f172a;
             --text-sub: #475569;
-            /* Sytá modro-fialová */
             --accent-color: #4f46e5;
             --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             --accent-hover-glow: 0 0 15px rgba(79, 70, 229, 0.5);
@@ -130,7 +115,6 @@ HTML_TEMPLATE = """
             --panel-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
 
-        /* --- Animované pozadí s gradientem --- */
         @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -144,7 +128,6 @@ HTML_TEMPLATE = """
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            /* Aktivace animace pozadí */
             background: linear-gradient(-45deg, var(--bg-1), var(--bg-2), var(--bg-3), var(--bg-1));
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
@@ -178,7 +161,6 @@ HTML_TEMPLATE = """
             align-items: center;
         }
 
-        /* Styl pro switch motivu */
         .theme-switch {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -201,7 +183,6 @@ HTML_TEMPLATE = """
             color: var(--accent-color);
         }
 
-        /* --- SECRET UNICORN --- */
         .unicorn-container {
             position: fixed;
             top: 50%;
@@ -272,7 +253,6 @@ HTML_TEMPLATE = """
             background: var(--input-bg);
         }
 
-        /* Custom styl pro file input */
         .file-input-wrapper { margin-bottom: 25px; text-align: left; }
         input[type="file"] { color: var(--text-sub); font-size: 0.9em; }
         input[type="file"]::file-selector-button {
@@ -291,7 +271,6 @@ HTML_TEMPLATE = """
             color: var(--bg-1);
         }
 
-        /* --- ANIMOVANÁ TLAČÍTKA (BOMBA EFFECT) --- */
         @keyframes buttonGlow {
             0% { box-shadow: 0 4px 6px rgba(208, 45, 245, 0.4); }
             50% { box-shadow: 0 4px 25px rgba(208, 45, 245, 0.7); }
@@ -316,14 +295,11 @@ HTML_TEMPLATE = """
             overflow: hidden;
         }
 
-        /* Hover animace buttonu */
         button:hover, .btn-link:hover { 
             transform: translateY(-4px) scale(1.02); 
-            /* Pulzující neon záře */
             animation: buttonGlow 1.5s infinite;
         }
 
-        /* Click efekt */
         button:active { transform: translateY(-1px) scale(0.99); }
 
         button:disabled {
@@ -335,7 +311,6 @@ HTML_TEMPLATE = """
             animation: none !important;
         }
 
-        /* Alternativní tlačítko (Registrace/Zpět) */
         .btn-alt {
             background: transparent;
             border: 2px solid var(--border-color);
@@ -350,7 +325,6 @@ HTML_TEMPLATE = """
             box-shadow: 0 5px 10px rgba(0,0,0,0.2);
         }
 
-        /* Horní toggle tlačítko */
         .toggle-auth-btn {
             background: rgba(255,255,255,0.03);
             border: 1px solid var(--border-color);
@@ -371,7 +345,6 @@ HTML_TEMPLATE = """
             transform: translateY(-2px);
         }
 
-        /* Výsledkové boxy */
         #result { animation: fadeInUp 0.5s ease; }
         .result-item-wrapper { margin-bottom: 25px; text-align: left; }
 
@@ -386,7 +359,6 @@ HTML_TEMPLATE = """
             color: var(--text-main);
         }
 
-        /* Historie karty */
         .history-item { 
             background: var(--input-bg); 
             border: 2px solid var(--border-color); 
@@ -425,20 +397,15 @@ HTML_TEMPLATE = """
         .history-text-preview { font-size: 0.9em; color: var(--text-sub); line-height: 1.5; }
         .history-ai-preview { font-size: 0.95em; color: var(--text-main); margin-top: 15px; border-left: 3px solid var(--accent-color); padding-left: 15px;}
 
-        /* --- Syté Notifikace (Flash messages) --- */
         .msg { padding: 18px 25px; border-radius: 14px; margin-bottom: 30px; font-weight: 600; font-size: 1em; animation: fadeInDown 0.4s ease; text-align: left; display: flex; align-items: center; gap: 10px;}
         
-        /* Červená pro chybu */
         .error-msg { background: rgba(255, 51, 51, 0.15); color: var(--error-color); border: 2px solid var(--error-color); }
         
-        /* Zelená pro úspěch */
         .success-msg { background: rgba(0, 230, 118, 0.15); color: var(--success-color); border: 2px solid var(--success-color); }
 
-        /* Animace */
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Loader */
         .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 4px solid var(--border-color); border-top: 4px solid var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -461,7 +428,6 @@ HTML_TEMPLATE = """
         <h1>Text Extractor <span>AI</span></h1>
         <p class="author">By Filip Kuba</p>
 
-        {# Zobrazení FLASH zpráv (chyby/úspěchy) #}
         {% if error %}
             <div class="msg error-msg"><i>⚠️</i> {{ error }}</div>
         {% endif %}
@@ -471,7 +437,6 @@ HTML_TEMPLATE = """
         {% endif %}
 
         {% if 'user_id' in session %}
-            {# --- SEKCE PRO PŘIHLÁŠENÉ (UPLOAD) --- #}
             <div class="upload-section">
                 <div class="file-input-wrapper">
                     <span class="label">Vyberte nahrávku (.wav)</span>
@@ -481,7 +446,6 @@ HTML_TEMPLATE = """
                 <div id="loader" class="loader"></div>
             </div>
             
-            {# Výsledky analýzy (skryté do AJAX requestu) #}
             <div id="result" style="display:none; text-align: left;">
                 <div class="result-item-wrapper">
                     <span class="label">📁 Původní přepis z audia</span>
@@ -495,7 +459,6 @@ HTML_TEMPLATE = """
                 <div style="height: 20px;"></div>
             </div>
 
-            {# Historie #}
             {% if history %}
             <h2>Historie tvých analýz</h2>
             {% for item in history %}
@@ -509,7 +472,6 @@ HTML_TEMPLATE = """
             {% endif %}
 
         {% else %}
-            {# --- SEKCE PRO NEPŘIHLÁŠENÉ (LOGIN/REG) --- #}
             <div id="loginSection" class="form-section">
                 <h2 style="margin-top: 0; text-align: center; margin-bottom:30px;">Přihlášení</h2>
                 <form action="/login" method="POST">
@@ -531,7 +493,6 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
-        // --- Logika pro Tmavý/Světlý režim (Syté barvy) ---
         function updateThemeIcon() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             // Sluníčko pro tmavý (přepne na světlý), měsíc pro světlý
@@ -547,10 +508,8 @@ HTML_TEMPLATE = """
             updateThemeIcon();
         }
 
-        // Inicializace ikonky po načtení
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
 
-        // --- Přepínání formulářů (Login/Register) ---
         function toggleAuthSection() {
             const login = document.getElementById('loginSection');
             const register = document.getElementById('registerSection');
@@ -570,29 +529,24 @@ HTML_TEMPLATE = """
         function spawnUnicorn() {
             const container = document.createElement('div');
             container.className = 'unicorn-container';
-            // Prdící duha následovaná jednorožcem
             container.innerHTML = '<span class="rainbow-fart">🌈</span><span>🦄</span>';
     
-            // Náhodná výška, aby neběhal vždycky středem
             container.style.top = Math.random() * 80 + 10 + '%';
     
             document.body.appendChild(container);
             container.classList.add('animate-unicorn');
 
-            // Po doběhnutí ho smažeme, ať nezatěžujeme prohlížeč
             setTimeout(() => {
                 container.remove();
             }, 6000);
         }
 
-        // Každou sekundu šance 1/1000
         setInterval(() => {
             if (Math.random() < 0.001) {
                 spawnUnicorn();
                 console.log("🦄 Secret unicorn spawned!");
             }
         }, 1000);
-        // --- AJAX Upload a Analýza ---
         async function upload() {
             const fileInput = document.getElementById('mediaFile');
             const btn = document.getElementById('btn');
@@ -609,7 +563,6 @@ HTML_TEMPLATE = """
             const formData = new FormData();
             formData.append("file", fileInput.files[0]);
 
-            // UI State: Loading
             btn.disabled = true;
             btn.innerText = "⏳ Probíhá analýza (může to trvat)...";
             loader.style.display = "block";
@@ -624,23 +577,18 @@ HTML_TEMPLATE = """
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Úspěch: Zobrazit výsledky
                     origRes.innerText = data.original_text;
                     aiRes.innerText = data.ai_analysis;
                     resDiv.style.display = "block";
                     
-                    // Volitelné: Scroll dolů na výsledek
                     resDiv.scrollIntoView({ behavior: 'smooth' });
                 } else {
-                    // Chyba ze serveru
                     alert("Chyba: " + (data.error || "Neznámá chyba při analýze."));
                 }
             } catch (err) {
-                // Chyba sítě
                 alert("Chyba: Nelze se spojit se serverem.");
                 print(err);
             } finally {
-                // UI State: Reset
                 btn.disabled = false;
                 btn.innerText = "Analyzovat nahrávku";
                 loader.style.display = "none";
@@ -652,18 +600,14 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# --- ROUTY (Backend zůstává stejný, jen přidáváme 'success' do redirectů) ---
-
 @app.route("/")
 def home():
-    # Získání zpráv z URL parametrů (flash náhrada)
     error = request.args.get("error")
     success = request.args.get("success")
     history_data = []
     
     if 'user_id' in session:
         with engine.connect() as conn:
-            # SQL dotaz pro historii (limitován pro přehlednost, řazen sestupně)
             result = conn.execute(
                 text("SELECT id, filename, original_text, ai_analysis, TO_CHAR(created_at, 'DD.MM.YYYY HH24:MI') FROM history WHERE user_id = :uid ORDER BY id DESC LIMIT 20"),
                 {"uid": session['user_id']}
@@ -681,17 +625,14 @@ def register():
          return redirect(url_for('home', error="Vyplňte prosím všechna pole."))
 
     with engine.connect() as conn:
-        # Zkontrolovat, zda uživatel už neexistuje
         existing = conn.execute(text("SELECT id FROM users WHERE username = :u"), {"u": username}).fetchone()
         if existing:
             return redirect(url_for('home', error="Toto uživatelské jméno je již obsazené."))
         
-        # Uložit nového s hashem hesla
         hashed_pw = generate_password_hash(password)
         conn.execute(text("INSERT INTO users (username, password_hash) VALUES (:u, :p)"), {"u": username, "p": hashed_pw})
         conn.commit()
         
-    # ÚSPĚCH -> zelená zpráva
     return redirect(url_for('home', success="Registrace byla úspěšná! Nyní se můžeš přihlásit."))
 
 @app.route("/login", methods=["POST"])
@@ -702,26 +643,21 @@ def login():
     with engine.connect() as conn:
         user = conn.execute(text("SELECT id, username, password_hash FROM users WHERE username = :u"), {"u": username}).fetchone()
         
-        # Ověření uživatele a hesla
         if user and check_password_hash(user[2], password):
-            # Vytvoření session
             session['user_id'] = user[0]
             session['username'] = user[1]
             return redirect(url_for('home', success=f"Vítej zpět, {username}!"))
         else:
-            # CHYBA -> červená zpráva
             return redirect(url_for('home', error="Nesprávné uživatelské jméno nebo heslo."))
 
 @app.route("/logout")
 def logout():
-    # Vyčištění session
     session.pop('user_id', None)
     session.pop('username', None)
     return redirect(url_for('home', success="Byl jsi úspěšně odhlášen."))
 
 @app.route("/ai", methods=["POST"])
 def analyze():
-    # API Zabezpečení - jen pro přihlášené
     if 'user_id' not in session:
         return jsonify({"error": "Pro tuto akci musíte být přihlášeni."}), 401
 
@@ -733,7 +669,6 @@ def analyze():
     if f.filename == '':
         return jsonify({"error": "Nebyl vybrán žádný soubor."}), 400
 
-    # Sanitize filename a uložení
     safe_filename = "".join([c for c in f.filename if c.isalpha() or c.isdigit() or c==' ' or c=='.' or c=='_']).rstrip()
     ext = safe_filename.split('.')[-1].upper() if '.' in safe_filename else "Unknown"
     
@@ -741,14 +676,11 @@ def analyze():
     f.save(path)
 
     try:
-        # 1. AUDIO -> TEXT (Převod na text)
         recognizer = sr.Recognizer()
         with sr.AudioFile(path) as source:
             audio_data = recognizer.record(source)
-            # Používáme angličtinu, jak bylo nastaveno dříve
             text_result = recognizer.recognize_google(audio_data, language="en-US")
 
-        # 2. CHAT ANALÝZA (AI Shrnutí)
         chat_res = requests.post(
             f"{AI_BASE_URL}/chat/completions",
             json={
@@ -759,8 +691,8 @@ def analyze():
                 }]
             },
             headers={"Authorization": f"Bearer {AI_API_KEY}"},
-            verify=False, # Kvůli školnímu certifikátu
-            timeout=60 # Zvýšený timeout pro větší nahrávky
+            verify=False, 
+            timeout=60 
         )
         
         if chat_res.status_code != 200:
@@ -768,7 +700,6 @@ def analyze():
 
         ai_text = chat_res.json()["choices"][0]["message"]["content"]
 
-        # 3. ULOŽENÍ DO DB
         with engine.connect() as conn:
             conn.execute(
                 text("INSERT INTO history (user_id, filename, original_text, ai_analysis) VALUES (:uid, :fn, :ot, :ai)"),
@@ -776,7 +707,6 @@ def analyze():
             )
             conn.commit()
 
-        # Návrat dat pro AJAX
         return jsonify({
             "media_type": ext,
             "original_text": text_result,
@@ -790,11 +720,9 @@ def analyze():
     except Exception as e:
         return jsonify({"error": f"Interní chyba serveru: {str(e)}"}), 500
     finally:
-        # Smazání dočasného souboru
         if os.path.exists(path):
             os.remove(path)
 
 if __name__ == "__main__":
-    # Spuštění Flask aplikace
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
