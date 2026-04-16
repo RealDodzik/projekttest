@@ -4,7 +4,6 @@ services:
     ports:
       - "5000"
     environment:
-      # Propojení na DB kontejner přes název služby "db"
       - DATABASE_URL=postgresql://student:heslo123@db:5432/myapp
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
@@ -18,5 +17,4 @@ services:
       - POSTGRES_USER=student
       - POSTGRES_PASSWORD=heslo123
       - POSTGRES_DB=myapp
-      # Přesměrování databáze do trvalého úložiště
       - PGDATA=/data/postgres
